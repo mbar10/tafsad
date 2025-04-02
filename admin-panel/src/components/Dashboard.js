@@ -160,16 +160,16 @@ const Dashboard = ({
                               {...provided.dragHandleProps}
                               onClick={() => setSelectedForm(form)}
                             >
-                              <h3>{form.commander}</h3>
+                              <h3>ממלא: {form.name}</h3>
                               <p className="event-description">{form.occurrence}</p>
                               <p className="form-date">{formatDateTime(form.date)}</p>
-                              <p className="form-name">ממלא: {form.name}</p>
                               {form.punishment && (
                                 <p className="punishment-preview">{form.punishment}</p>
                               )}
                               {form.comments && form.comments.length > 0 && (
                                 <div className="comment-count">{form.comments.length}</div>
                               )}
+                              <div className="commander-tag">{form.commander}</div>
                             </div>
                           )}
                         </Draggable>
@@ -196,12 +196,12 @@ const Dashboard = ({
             <h2>פרטי טופס</h2>
             <div className="form-details">
               <p><strong>ממלא:</strong> {selectedForm.name}</p>
-              <p><strong>מפקד:</strong> {selectedForm.commander}</p>
               <p><strong>תיאור אירוע:</strong> {selectedForm.occurrence}</p>
               <p><strong>תאריך:</strong> {formatDateTime(selectedForm.date)}</p>
               <p><strong>עמודה:</strong> {columns.find(col => col.id === selectedForm.columnId)?.title}</p>
               <p><strong>נזק:</strong> {selectedForm.damage}</p>
               <p><strong>מניעה:</strong> {selectedForm.prevention}</p>
+              <p><strong>מפקד:</strong> {selectedForm.commander}</p>
               <div className="punishment-section">
                 <h3>עונש</h3>
                 <textarea
