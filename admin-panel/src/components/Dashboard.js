@@ -161,7 +161,7 @@ const Dashboard = ({
                               onClick={() => setSelectedForm(form)}
                             >
                               <h3>{form.commander}</h3>
-                              <p className="event-description">{form.eventDescription}</p>
+                              <p className="event-description">{form.occurrence}</p>
                               <p className="form-date">{formatDateTime(form.date)}</p>
                               <p className="form-name">ממלא: {form.name}</p>
                               {form.punishment && (
@@ -197,10 +197,9 @@ const Dashboard = ({
             <div className="form-details">
               <p><strong>ממלא:</strong> {selectedForm.name}</p>
               <p><strong>מפקד:</strong> {selectedForm.commander}</p>
-              <p><strong>תיאור אירוע:</strong> {selectedForm.eventDescription}</p>
+              <p><strong>תיאור אירוע:</strong> {selectedForm.occurrence}</p>
               <p><strong>תאריך:</strong> {formatDateTime(selectedForm.date)}</p>
               <p><strong>עמודה:</strong> {columns.find(col => col.id === selectedForm.columnId)?.title}</p>
-              <p><strong>תקלה:</strong> {selectedForm.occurrence}</p>
               <p><strong>נזק:</strong> {selectedForm.damage}</p>
               <p><strong>מניעה:</strong> {selectedForm.prevention}</p>
               <div className="punishment-section">
