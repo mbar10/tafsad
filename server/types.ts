@@ -9,6 +9,7 @@ export interface Form {
   damage: string;
   prevention: string;
   date: string;
+  requestDateTime: string;
   columnId: string;
   punishment?: string;
   comments?: Comment[];

@@ -42,7 +42,7 @@ function App() {
     <Router>
       <div className="App">
         <header className="App-header">
-          <h1>מערכת מילוי טפסים</h1>
+          <h1>מילוי טופס דיווח</h1>
         </header>
         <main>
           <Routes>

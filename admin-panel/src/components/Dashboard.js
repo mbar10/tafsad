@@ -7,14 +7,32 @@ const Dashboard = ({
   onLogout,
   onSort,
   onUpdateColumn,
-  onUpdatePunishment
+  onUpdatePunishment,
+  onUpdateFormColumn,
+  onAddComment,
+  onUpdateForm
 }) => {
   const { forms } = useAuth();
   const [columns, setColumns] = useState([]);
+  const [pendingForms, setPendingForms] = useState([]);
   const [selectedForm, setSelectedForm] = useState(null);
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
   const [newComment, setNewComment] = useState('');
+  const [newPendingForm, setNewPendingForm] = useState({
+    name: '',
+    eventDescription: ''
+  });
+  const [newFormData, setNewFormData] = useState({
+    name: '',
+    occurrence: '',
+    commander: '',
+    date: new Date().toISOString().split('T')[0],
+    requestDateTime: new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' })
+      .replace(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2})/, '$3-$2-$1T$4:$5'),
+    damage: '',
+    prevention: ''
+  });
 
   useEffect(() => {
     const fetchColumns = async () => {
@@ -34,7 +52,20 @@ const Dashboard = ({
       }
     };
 
+    const fetchPendingForms = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/pending-forms');
+        if (response.ok) {
+          const data = await response.json();
+          setPendingForms(data);
+        }
+      } catch (error) {
+        console.error('Error fetching pending forms:', error);
+      }
+    };
+
     fetchColumns();
+    fetchPendingForms();
   }, []);
 
   const handleSortChange = (newSortBy, newSortOrder) => {
@@ -111,6 +142,76 @@ const Dashboard = ({
     }
   };
 
+  const handleCreateForm = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('http://localhost:5000/api/forms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...newFormData,
+          columnId: columns[0].id // Add to first column by default
+        })
+      });
+
+      if (response.ok) {
+        const newForm = await response.json();
+        onUpdateForm(newForm);
+        setNewFormData({
+          name: '',
+          occurrence: '',
+          commander: '',
+          date: new Date().toISOString().split('T')[0],
+          requestDateTime: new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' })
+            .replace(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2})/, '$3-$2-$1T$4:$5'),
+          damage: '',
+          prevention: ''
+        });
+      }
+    } catch (error) {
+      console.error('Error creating form:', error);
+    }
+  };
+
+  const handleAddPendingForm = async () => {
+    if (!newPendingForm.name.trim() || !newPendingForm.eventDescription.trim()) return;
+
+    try {
+      const response = await fetch('http://localhost:5000/api/pending-forms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newPendingForm)
+      });
+
+      if (response.ok) {
+        const newForm = await response.json();
+        setPendingForms(prev => [...prev, newForm]);
+        setNewPendingForm({ name: '', eventDescription: '' });
+      }
+    } catch (error) {
+      console.error('Error adding pending form:', error);
+    }
+  };
+
+  const handleDeletePendingForm = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/pending-forms/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        setPendingForms(prev => prev.filter(form => form.id !== id));
+      }
+    } catch (error) {
+      console.error('Error deleting pending form:', error);
+    }
+  };
+
   return (
     <div className="dashboard">
       <div className="dashboard-header">
@@ -138,6 +239,45 @@ const Dashboard = ({
 
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="kanban-board">
+          <div className="kanban-column pending-column">
+            <h2 className="column-title">ממתין להגשה</h2>
+            <div className="pending-forms-list">
+              <div className="add-pending-form">
+                <div className="form-group">
+                  <input
+                    type="text"
+                    value={newPendingForm.name}
+                    onChange={(e) => setNewPendingForm(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="שם..."
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddPendingForm()}
+                  />
+                </div>
+                <div className="form-group">
+                  <textarea
+                    value={newPendingForm.eventDescription}
+                    onChange={(e) => setNewPendingForm(prev => ({ ...prev, eventDescription: e.target.value }))}
+                    placeholder="תיאור האירוע..."
+                    onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleAddPendingForm())}
+                  />
+                </div>
+                <button onClick={handleAddPendingForm}>הוסף</button>
+              </div>
+              {pendingForms.map(form => (
+                <div key={form.id} className="pending-form-card">
+                  <div className="pending-form-content">
+                    <div className="pending-form-name">{form.name}</div>
+                    <div className="pending-form-event">{form.eventDescription}</div>
+                  </div>
+                  <button
+                    className="delete-btn"
+                    onClick={() => handleDeletePendingForm(form.id)}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
           {columns.map(column => (
             <div key={column.id} className="kanban-column">
               <h2 className="column-title">{column.title}</h2>

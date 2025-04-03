@@ -23,6 +23,17 @@ const adminUser: AdminUser = {
   password: 'admin123'
 };
 
+// Add this after the existing interfaces
+interface PendingForm {
+  id: string;
+  name: string;
+  eventDescription: string;
+  date: string;
+}
+
+// Add this after the existing state variables
+let pendingForms: PendingForm[] = [];
+
 // Middleware to verify JWT token
 const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction): void => {
   const authHeader = req.headers['authorization'];
@@ -60,18 +71,55 @@ app.get('/api/forms', authenticateToken, (req: Request, res: Response) => {
   res.json(forms);
 });
 
-// Create new form
-app.post('/api/forms', (req: Request, res: Response) => {
-  const newForm: Form = {
-    ...req.body,
+// Get all pending forms
+app.get('/api/pending-forms', (req, res) => {
+  res.json(pendingForms);
+});
+
+// Post a new pending form
+app.post('/api/pending-forms', (req, res) => {
+  const { name, eventDescription } = req.body;
+  const newPendingForm: PendingForm = {
     id: Date.now().toString(),
-    columnId: '1', // Default to first column
-    comments: [], // Initialize empty comments array
-    punishment: '', // Initialize empty punishment
-    date: new Date().toISOString() // Ensure date is set
+    name,
+    eventDescription,
+    date: new Date().toISOString()
   };
+  pendingForms.push(newPendingForm);
+  res.json(newPendingForm);
+});
+
+// Delete a pending form
+app.delete('/api/pending-forms/:id', (req, res) => {
+  const { id } = req.params;
+  pendingForms = pendingForms.filter(form => form.id !== id);
+  res.json({ success: true });
+});
+
+// Create new form
+app.post('/api/forms', (req, res) => {
+  const { name, occurrence, commander, date, requestDateTime, damage, prevention, columnId } = req.body;
+  
+  // Remove the name from pending forms if it exists
+  pendingForms = pendingForms.filter(form => form.name !== name);
+
+  const newForm: Form = {
+    id: Date.now().toString(),
+    name,
+    occurrence,
+    commander,
+    date,
+    requestDateTime,
+    damage,
+    prevention,
+    eventDescription: occurrence,
+    columnId: columnId || columns[0].id,
+    comments: [],
+    punishment: ''
+  };
+  
   forms.push(newForm);
-  res.status(201).json(newForm);
+  res.json(newForm);
 });
 
 // Update form column
