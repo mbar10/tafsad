@@ -9,7 +9,9 @@ function Form({ onFormSubmit, onSuccess }) {
     occurrence: '',
     damage: '',
     prevention: '',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    requestDateTime: new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' })
+      .replace(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2})/, '$3-$2-$1T$4:$5')
   });
 
   const handleChange = (e) => {
@@ -38,7 +40,9 @@ function Form({ onFormSubmit, onSuccess }) {
           occurrence: '',
           damage: '',
           prevention: '',
-          date: new Date().toISOString().split('T')[0]
+          date: new Date().toISOString().split('T')[0],
+          requestDateTime: new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' })
+            .replace(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2})/, '$3-$2-$1T$4:$5')
         });
         onFormSubmit();
         onSuccess();
@@ -51,7 +55,7 @@ function Form({ onFormSubmit, onSuccess }) {
   return (
     <form onSubmit={handleSubmit} className="form-container">
       <div className="form-group">
-        <label htmlFor="name">שם:</label>
+        <label htmlFor="name">שם מלא:</label>
         <input
           type="text"
           id="name"
@@ -73,7 +77,7 @@ function Form({ onFormSubmit, onSuccess }) {
         />
       </div>
       <div className="form-group">
-        <label htmlFor="commander">מפקד שביקש:</label>
+        <label htmlFor="commander">מי המפקד/ת שביקש/ה ממך להגיש טופס דיווח:</label>
         <input
           type="text"
           id="commander"
@@ -84,7 +88,18 @@ function Form({ onFormSubmit, onSuccess }) {
         />
       </div>
       <div className="form-group">
-        <label htmlFor="occurrence">תיאור האירוע:</label>
+        <label htmlFor="requestDateTime">מתי התבקשת להגיש טופס דיווח?</label>
+        <input
+          type="datetime-local"
+          id="requestDateTime"
+          name="requestDateTime"
+          value={formData.requestDateTime}
+          onChange={handleChange}
+          required
+        />
+      </div>
+      <div className="form-group">
+        <label htmlFor="occurrence">תיאור האירוע (פרט/י והצמד/י לעובדות):</label>
         <textarea
           id="occurrence"
           name="occurrence"
@@ -94,7 +109,7 @@ function Form({ onFormSubmit, onSuccess }) {
         />
       </div>
       <div className="form-group">
-        <label htmlFor="damage">תיאור הנזק:</label>
+        <label htmlFor="damage">הנזק/ פוטנציאל הנזק:</label>
         <textarea
           id="damage"
           name="damage"
@@ -104,7 +119,7 @@ function Form({ onFormSubmit, onSuccess }) {
         />
       </div>
       <div className="form-group">
-        <label htmlFor="prevention">אמצעי מניעה:</label>
+        <label htmlFor="prevention">איך ניתן להמנע מהמקרה להבא:</label>
         <textarea
           id="prevention"
           name="prevention"

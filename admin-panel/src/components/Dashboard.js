@@ -195,12 +195,13 @@ const Dashboard = ({
             }}>×</button>
             <h2>פרטי טופס</h2>
             <div className="form-details">
-              <p><strong>ממלא:</strong> {selectedForm.name}</p>
+              <p><strong>שם מלא:</strong> {selectedForm.name}</p>
               <p><strong>תיאור אירוע:</strong> {selectedForm.occurrence}</p>
               <p><strong>תאריך:</strong> {formatDateTime(selectedForm.date)}</p>
+              <p><strong>מתי התבקשת להגיש טופס דיווח:</strong> {formatDateTime(selectedForm.requestDateTime)}</p>
               <p><strong>עמודה:</strong> {columns.find(col => col.id === selectedForm.columnId)?.title}</p>
-              <p><strong>נזק:</strong> {selectedForm.damage}</p>
-              <p><strong>מניעה:</strong> {selectedForm.prevention}</p>
+              <p><strong>הנזק/ פוטנציאל הנזק:</strong> {selectedForm.damage}</p>
+              <p><strong>איך ניתן להמנע מהמקרה להבא:</strong> {selectedForm.prevention}</p>
               <p><strong>מפקד:</strong> {selectedForm.commander}</p>
               <div className="punishment-section">
                 <h3>עונש</h3>

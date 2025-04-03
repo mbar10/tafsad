@@ -70,7 +70,7 @@ const Form: React.FC = () => {
           <div className="error-message">אירעה שגיאה בשליחת הטופס. אנא נסה שוב.</div>
         )}
         <div className="form-group">
-          <label htmlFor="name">שם:</label>
+          <label htmlFor="name">שם מלא:</label>
           <input
             type="text"
             id="name"
@@ -123,7 +123,7 @@ const Form: React.FC = () => {
           />
         </div>
         <div className="form-group">
-          <label htmlFor="prevention">אמצעי מניעה:</label>
+          <label htmlFor="prevention">איך ניתן להמנע מהמקרה להבא:</label>
           <textarea
             id="prevention"
             name="prevention"
