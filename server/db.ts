@@ -45,6 +45,17 @@ class Database {
         punishment TEXT DEFAULT ''
       )`);
 
+      // Drop and recreate pending_forms table
+      this.db.run('DROP TABLE IF EXISTS pending_forms');
+      this.db.run(`CREATE TABLE pending_forms (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        eventDescription TEXT NOT NULL,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`);
+
       // Create columns table
       this.db.run(`CREATE TABLE IF NOT EXISTS columns (
         id TEXT PRIMARY KEY,
@@ -266,6 +277,123 @@ class Database {
           }
         );
       });
+    });
+  }
+
+  // Pending Forms operations
+  async createPendingForm(data: { name: string; eventDescription: string }): Promise<{ id: string; name: string; eventDescription: string; status: string; createdAt: string; updatedAt: string }> {
+    const now = new Date().toISOString();
+    const id = Date.now().toString();
+    const status = 'pending';
+
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        'INSERT INTO pending_forms (id, name, eventDescription, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+        [id, data.name, data.eventDescription, status, now, now],
+        (err: Error | null) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve({
+            id,
+            name: data.name,
+            eventDescription: data.eventDescription,
+            status,
+            createdAt: now,
+            updatedAt: now
+          });
+        }
+      );
+    });
+  }
+
+  async getPendingForms(): Promise<Array<{ id: string; name: string; eventDescription: string; status: string; createdAt: string; updatedAt: string }>> {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        `SELECT * FROM pending_forms ORDER BY created_at DESC`,
+        (err: Error | null, rows: any[]) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve(rows.map(row => ({
+            id: row.id,
+            name: row.name,
+            eventDescription: row.eventDescription,
+            status: row.status,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at
+          })));
+        }
+      );
+    });
+  }
+
+  async getPendingForm(id: string): Promise<{ id: string; name: string; eventDescription: string; status: string; createdAt: string; updatedAt: string } | null> {
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        `SELECT * FROM pending_forms WHERE id = ?`,
+        [id],
+        (err: Error | null, row: any) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          if (!row) {
+            resolve(null);
+            return;
+          }
+          resolve({
+            id: row.id,
+            name: row.name,
+            eventDescription: row.eventDescription,
+            status: row.status,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at
+          });
+        }
+      );
+    });
+  }
+
+  async updatePendingFormStatus(id: string, status: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        'UPDATE pending_forms SET status = ?, updated_at = ? WHERE id = ?',
+        [status, new Date().toISOString(), id],
+        function(this: RunResult, err: Error | null) {
+          if (err) {
+            reject(err);
+            return;
+          }
+          if (this.changes === 0) {
+            reject(new Error('Pending form not found'));
+            return;
+          }
+          resolve();
+        }
+      );
+    });
+  }
+
+  async deletePendingForm(id: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        'DELETE FROM pending_forms WHERE id = ?',
+        [id],
+        function(this: RunResult, err: Error | null) {
+          if (err) {
+            reject(err);
+            return;
+          }
+          if (this.changes === 0) {
+            reject(new Error('Pending form not found'));
+            return;
+          }
+          resolve();
+        }
+      );
     });
   }
 }
