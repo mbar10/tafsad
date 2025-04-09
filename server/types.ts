@@ -11,8 +11,8 @@ export interface Form {
   date: string;
   requestDateTime: string;
   columnId: string;
-  punishment?: string;
-  comments?: Comment[];
+  punishment: string;
+  comments: Comment[];
 }
 
 export interface Comment {
@@ -24,6 +24,7 @@ export interface Comment {
 export interface Column {
   id: string;
   title: string;
+  order: number;
 }
 
 export interface AdminUser {
@@ -32,9 +33,7 @@ export interface AdminUser {
 }
 
 export interface AuthRequest extends Request {
-  user?: {
-    username: string;
-  };
+  user?: any;
 }
 
 export interface ColumnUpdateRequest extends Request {
