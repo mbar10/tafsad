@@ -1,19 +1,37 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
-import { Form, Comment, Column, AdminUser, AuthRequest, ColumnUpdateRequest, PunishmentUpdateRequest, CommentCreateRequest, CommentUpdateRequest } from './types';
-import { database } from './db';
+import { AdminUser, AuthRequest, ColumnUpdateRequest, PunishmentUpdateRequest, CommentCreateRequest, CommentUpdateRequest } from './types';
+import { Database } from './db';
+import { randomUUID } from 'crypto';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-// Enable CORS for all routes
-app.use(cors({
-  origin: '*', // Allow all origins
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+const COLUMNS = [{
+  id: "new",
+  title: "חדשים"
+},
+{
+  id: "punishmentComing",
+  title: "עונש בהורדה"
+},
+{
+  id: "punishmentRunning",
+  title: "עונש בריצה"
+},
+{
+  id: "history",
+  title: "היסטוריה"
+}
+];
+
+const database = new Database(process.env.MONGO_URI || 'mongodb://localhost:27017/myapp');
+
+database.connect()
+
+app.use(cors());
 
 app.use(express.json());
 
@@ -135,8 +153,9 @@ app.post('/api/forms', async (req: Request, res: Response) => {
 
     const parsedDate = parseDate(date);
     const parsedRequestDateTime = parseDate(requestDateTime);
-
+    const id = randomUUID()
     const newForm = await database.createForm({
+      id,
       name,
       occurrence,
       commander,
@@ -144,9 +163,10 @@ app.post('/api/forms', async (req: Request, res: Response) => {
       requestDateTime: parsedRequestDateTime,
       damage,
       prevention,
-      columnId: columnId || '1',
+      columnId: columnId || COLUMNS[0].id,
       punishment: '',
-      eventDescription: occurrence
+      eventDescription: occurrence,
+      comments: []
     });
 
     console.log('Created new form:', newForm);
@@ -195,12 +215,9 @@ app.patch('/api/forms/:id/punishment', authenticateToken, async (req: Punishment
 
 // Get all columns
 app.get('/api/columns', async (req: Request, res: Response) => {
-  try {
-    const columns = await database.getAllColumns();
-    res.json(columns);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching columns', error: (error as Error).message });
-  }
+  
+  res.json(COLUMNS);
+  
 });
 
 // Get pending forms (forms in the first column)
@@ -337,5 +354,4 @@ app.delete('/api/forms/:formId/comments/:commentId', authenticateToken, async (r
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-  console.log(`Base URL: http://localhost:${PORT}`);
 }); 

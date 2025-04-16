@@ -1,401 +1,120 @@
-import sqlite3 from 'sqlite3';
-import { Form, Comment, Column } from './types';
+import mongoose from 'mongoose';
+import { Form, PendingForm } from "./models";
+import {Form as FormType} from "./types" 
 
-// Database types
-interface DBForm extends Omit<Form, 'comments'> {
-  comments: string;
-}
+export class Database {
+  private uri: string;
 
-interface DBColumn extends Column {
-  column_order: number;
-}
-
-interface RunResult extends sqlite3.RunResult {
-  changes: number;
-}
-
-class Database {
-  private db: sqlite3.Database;
-
-  constructor() {
-    this.db = new sqlite3.Database('forms.db', (err: Error | null) => {
-      if (err) {
-        console.error('Error opening database:', err);
-      } else {
-        console.log('Connected to SQLite database');
-        this.initializeDatabase();
-      }
-    });
+  constructor(uri: string) {
+    this.uri = uri;
   }
 
-  private initializeDatabase(): void {
-    this.db.serialize(() => {
-      // Create forms table
-      this.db.run(`CREATE TABLE IF NOT EXISTS forms (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        occurrence TEXT NOT NULL,
-        commander TEXT NOT NULL,
-        date TEXT NOT NULL,
-        requestDateTime TEXT NOT NULL,
-        damage TEXT NOT NULL,
-        prevention TEXT NOT NULL,
-        columnId TEXT NOT NULL,
-        comments TEXT DEFAULT '[]',
-        punishment TEXT DEFAULT ''
-      )`);
-
-      // Drop and recreate pending_forms table
-      this.db.run('DROP TABLE IF EXISTS pending_forms');
-      this.db.run(`CREATE TABLE pending_forms (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        eventDescription TEXT NOT NULL,
-        status TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      )`);
-
-      // Create columns table
-      this.db.run(`CREATE TABLE IF NOT EXISTS columns (
-        id TEXT PRIMARY KEY,
-        title TEXT NOT NULL,
-        column_order INTEGER NOT NULL
-      )`, (err: Error | null) => {
-        if (err) {
-          console.error('Error creating columns table:', err);
-        } else {
-          this.initializeDefaultColumns();
-        }
+  async connect(): Promise<void> {
+    try {
+      await mongoose.connect(this.uri, {
+        dbName: 'your-db-name', // Optional: overrides db name in URI
       });
-    });
+      console.log('✅ Connected to MongoDB');
+    } catch (err) {
+      console.error('MongoDB connection error:', err);
+      process.exit(1);
+    }
   }
 
-  private initializeDefaultColumns(): void {
-    const defaultColumns = [
-      { id: '1', title: 'ממתין לעונש', column_order: 0 },
-      { id: '2', title: 'עונש נקבע', column_order: 1 },
-      { id: '3', title: 'עונש בביצוע', column_order: 2 },
-      { id: '4', title: 'עונש הושלם', column_order: 3 }
-    ];
-
-    defaultColumns.forEach(column => {
-      this.db.run(
-        'INSERT OR IGNORE INTO columns (id, title, column_order) VALUES (?, ?, ?)',
-        [column.id, column.title, column.column_order]
-      );
-    });
+  async disconnect(): Promise<void> {
+    await mongoose.disconnect();
+    console.log('Disconnected from MongoDB');
   }
 
-  // Forms operations
-  async getAllForms(): Promise<Form[]> {
-    return new Promise((resolve, reject) => {
-      this.db.all('SELECT * FROM forms ORDER BY date DESC', (err: Error | null, rows: DBForm[]) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        resolve(rows.map(row => ({
-          ...row,
-          comments: JSON.parse(row.comments)
-        })));
-      });
-    });
+  async createForm(data: FormType): Promise<void> {
+    const newForm = new Form(data);
+    await newForm.save();
   }
 
-  async createForm(form: Omit<Form, 'id' | 'comments'>): Promise<Form> {
-    const newForm = {
-      ...form,
-      id: Date.now().toString(),
-      comments: '[]'
-    };
-
-    return new Promise((resolve, reject) => {
-      this.db.run(
-        'INSERT INTO forms (id, name, occurrence, commander, date, requestDateTime, damage, prevention, columnId, comments, punishment) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [newForm.id, newForm.name, newForm.occurrence, newForm.commander, newForm.date, newForm.requestDateTime, newForm.damage, newForm.prevention, newForm.columnId, newForm.comments, newForm.punishment],
-        (err: Error | null) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          resolve({ ...newForm, comments: [] });
-        }
-      );
-    });
+  async getAllForms(): Promise<FormType[]> {
+    return Form.find().lean();
   }
 
   async updateFormColumn(id: string, columnId: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.db.run(
-        'UPDATE forms SET columnId = ? WHERE id = ?',
-        [columnId, id],
-        function(this: RunResult, err: Error | null) {
-          if (err) {
-            reject(err);
-            return;
-          }
-          if (this.changes === 0) {
-            reject(new Error('Form not found'));
-            return;
-          }
-          resolve();
-        }
-      );
-    });
+    const result = await Form.updateOne({ id }, { columnId });
+    if (result.modifiedCount === 0) throw new Error('Form not found');
   }
 
   async updateFormPunishment(id: string, punishment: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.db.run(
-        'UPDATE forms SET punishment = ? WHERE id = ?',
-        [punishment, id],
-        function(this: RunResult, err: Error | null) {
-          if (err) {
-            reject(err);
-            return;
-          }
-          if (this.changes === 0) {
-            reject(new Error('Form not found'));
-            return;
-          }
-          resolve();
-        }
-      );
-    });
+    const result = await Form.updateOne({ id }, { punishment });
+    if (result.modifiedCount === 0) throw new Error('Form not found');
   }
 
-  // Columns operations
-  async getAllColumns(): Promise<Column[]> {
-    return new Promise((resolve, reject) => {
-      this.db.all('SELECT id, title, column_order as "order" FROM columns ORDER BY column_order', (err: Error | null, rows: any[]) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        resolve(rows);
-      });
-    });
+
+  async addComment(formId: string, text: string): Promise<any> {
+    const form = await Form.findOne({ id: formId });
+    if (!form) throw new Error('Form not found');
+
+    const newComment = {
+      id: Date.now().toString(),
+      text,
+      createdAt: new Date().toISOString()
+    };
+
+    form.comments.push(newComment);
+    await form.save();
+    return newComment;
   }
 
-  // Comments operations
-  async addComment(formId: string, text: string): Promise<Comment> {
-    return new Promise((resolve, reject) => {
-      this.db.get('SELECT comments FROM forms WHERE id = ?', [formId], (err: Error | null, row: DBForm | undefined) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        if (!row) {
-          reject(new Error('Form not found'));
-          return;
-        }
+  async updateComment(formId: string, commentId: string, text: string): Promise<any> {
+    const form = await Form.findOne({ id: formId });
+    if (!form) throw new Error('Form not found');
 
-        const comments = JSON.parse(row.comments);
-        const newComment = {
-          id: Date.now().toString(),
-          text,
-          createdAt: new Date().toISOString()
-        };
-        comments.push(newComment);
+    const comment = form.comments.find(c => c.id === commentId);
+    if (!comment) throw new Error('Comment not found');
 
-        this.db.run(
-          'UPDATE forms SET comments = ? WHERE id = ?',
-          [JSON.stringify(comments), formId],
-          (err: Error | null) => {
-            if (err) {
-              reject(err);
-              return;
-            }
-            resolve(newComment);
-          }
-        );
-      });
-    });
-  }
-
-  async updateComment(formId: string, commentId: string, text: string): Promise<Comment> {
-    return new Promise((resolve, reject) => {
-      this.db.get('SELECT comments FROM forms WHERE id = ?', [formId], (err: Error | null, row: DBForm | undefined) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        if (!row) {
-          reject(new Error('Form not found'));
-          return;
-        }
-
-        const comments = JSON.parse(row.comments);
-        const commentIndex = comments.findIndex((c: Comment) => c.id === commentId);
-        if (commentIndex === -1) {
-          reject(new Error('Comment not found'));
-          return;
-        }
-
-        comments[commentIndex] = { ...comments[commentIndex], text };
-
-        this.db.run(
-          'UPDATE forms SET comments = ? WHERE id = ?',
-          [JSON.stringify(comments), formId],
-          (err: Error | null) => {
-            if (err) {
-              reject(err);
-              return;
-            }
-            resolve(comments[commentIndex]);
-          }
-        );
-      });
-    });
+    comment.text = text;
+    await form.save();
+    return comment;
   }
 
   async deleteComment(formId: string, commentId: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.db.get('SELECT comments FROM forms WHERE id = ?', [formId], (err: Error | null, row: DBForm | undefined) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        if (!row) {
-          reject(new Error('Form not found'));
-          return;
-        }
-
-        const comments = JSON.parse(row.comments);
-        const updatedComments = comments.filter((c: Comment) => c.id !== commentId);
-
-        this.db.run(
-          'UPDATE forms SET comments = ? WHERE id = ?',
-          [JSON.stringify(updatedComments), formId],
-          (err: Error | null) => {
-            if (err) {
-              reject(err);
-              return;
-            }
-            resolve();
-          }
-        );
-      });
-    });
+    const form = await Form.findOne({ id: formId });
+    if (!form) throw new Error('Form not found');
+  
+    form.comments.pull({ id: commentId });
+    await form.save();
   }
-
-  // Pending Forms operations
-  async createPendingForm(data: { name: string; eventDescription: string }): Promise<{ id: string; name: string; eventDescription: string; status: string; createdAt: string; updatedAt: string }> {
+  
+  async createPendingForm(data: { name: string; eventDescription: string }) {
     const now = new Date().toISOString();
     const id = Date.now().toString();
-    const status = 'pending';
 
-    return new Promise((resolve, reject) => {
-      this.db.run(
-        'INSERT INTO pending_forms (id, name, eventDescription, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
-        [id, data.name, data.eventDescription, status, now, now],
-        (err: Error | null) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          resolve({
-            id,
-            name: data.name,
-            eventDescription: data.eventDescription,
-            status,
-            createdAt: now,
-            updatedAt: now
-          });
-        }
-      );
+    const pendingForm = new PendingForm({
+      id,
+      name: data.name,
+      eventDescription: data.eventDescription,
+      status: 'pending',
+      createdAt: now,
+      updatedAt: now
     });
+
+    await pendingForm.save();
+    return pendingForm.toObject();
   }
 
-  async getPendingForms(): Promise<Array<{ id: string; name: string; eventDescription: string; status: string; createdAt: string; updatedAt: string }>> {
-    return new Promise((resolve, reject) => {
-      this.db.all(
-        `SELECT * FROM pending_forms ORDER BY created_at DESC`,
-        (err: Error | null, rows: any[]) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          resolve(rows.map(row => ({
-            id: row.id,
-            name: row.name,
-            eventDescription: row.eventDescription,
-            status: row.status,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at
-          })));
-        }
-      );
-    });
+  async getPendingForms() {
+    const rows = await PendingForm.find().sort({ createdAt: -1 }).lean();
+    return rows;
   }
 
-  async getPendingForm(id: string): Promise<{ id: string; name: string; eventDescription: string; status: string; createdAt: string; updatedAt: string } | null> {
-    return new Promise((resolve, reject) => {
-      this.db.get(
-        `SELECT * FROM pending_forms WHERE id = ?`,
-        [id],
-        (err: Error | null, row: any) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          if (!row) {
-            resolve(null);
-            return;
-          }
-          resolve({
-            id: row.id,
-            name: row.name,
-            eventDescription: row.eventDescription,
-            status: row.status,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at
-          });
-        }
-      );
-    });
+  async getPendingForm(id: string) {
+    const form = await PendingForm.findOne({ id }).lean();
+    return form || null;
   }
 
   async updatePendingFormStatus(id: string, status: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.db.run(
-        'UPDATE pending_forms SET status = ?, updated_at = ? WHERE id = ?',
-        [status, new Date().toISOString(), id],
-        function(this: RunResult, err: Error | null) {
-          if (err) {
-            reject(err);
-            return;
-          }
-          if (this.changes === 0) {
-            reject(new Error('Pending form not found'));
-            return;
-          }
-          resolve();
-        }
-      );
-    });
+    const result = await PendingForm.updateOne({ id }, { status, updatedAt: new Date().toISOString() });
+    if (result.modifiedCount === 0) throw new Error('Pending form not found');
   }
 
   async deletePendingForm(id: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.db.run(
-        'DELETE FROM pending_forms WHERE id = ?',
-        [id],
-        function(this: RunResult, err: Error | null) {
-          if (err) {
-            reject(err);
-            return;
-          }
-          if (this.changes === 0) {
-            reject(new Error('Pending form not found'));
-            return;
-          }
-          resolve();
-        }
-      );
-    });
+    const result = await PendingForm.deleteOne({ id });
+    if (result.deletedCount === 0) throw new Error('Pending form not found');
   }
 }
-
-export const database = new Database(); 

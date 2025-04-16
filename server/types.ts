@@ -21,12 +21,6 @@ export interface Comment {
   createdAt: string;
 }
 
-export interface Column {
-  id: string;
-  title: string;
-  order: number;
-}
-
 export interface AdminUser {
   username: string;
   password: string;

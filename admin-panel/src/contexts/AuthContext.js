@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }) => {
 
   const fetchForms = async (token) => {
     try {
-      const response = await fetch('http://server:5000/api/forms', {
+      const response = await fetch('http://localhost:5000/api/forms', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }) => {
         const data = await response.json();
         if (data.code === 'TOKEN_EXPIRED') {
           // Try to refresh the token
-          const refreshResponse = await fetch('http://server:5000/api/admin/refresh-token', {
+          const refreshResponse = await fetch('http://localhost:5000/api/admin/refresh-token', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`
@@ -73,7 +73,7 @@ export const AuthProvider = ({ children }) => {
   const handleLogin = async (username, password) => {
     try {
       setLoginError('');
-      const response = await fetch('http://server:5000/api/admin/login', {
+      const response = await fetch('http://localhost:5000/api/admin/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -119,7 +119,7 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      const response = await fetch(`http://server:5000/api/forms/${formId}/column`, {
+      const response = await fetch(`http://localhost:5000/api/forms/${formId}/column`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ export const AuthProvider = ({ children }) => {
         const data = await response.json();
         if (data.code === 'TOKEN_EXPIRED') {
           // Try to refresh the token
-          const refreshResponse = await fetch('http://server:5000/api/admin/refresh-token', {
+          const refreshResponse = await fetch('http://localhost:5000/api/admin/refresh-token', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`
@@ -174,7 +174,7 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      const response = await fetch(`http://server:5000/api/forms/${formId}/punishment`, {
+      const response = await fetch(`http://localhost:5000/api/forms/${formId}/punishment`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -187,7 +187,7 @@ export const AuthProvider = ({ children }) => {
         const data = await response.json();
         if (data.code === 'TOKEN_EXPIRED') {
           // Try to refresh the token
-          const refreshResponse = await fetch('http://server:5000/api/admin/refresh-token', {
+          const refreshResponse = await fetch('http://localhost:5000/api/admin/refresh-token', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`

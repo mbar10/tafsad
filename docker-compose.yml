@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  server:
+    build: ./server
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./server/data:/app/data
+      - ./server:/app
+    user: "1000:1000"  # Use the same user ID as your host system
+    networks:
+      - tafsad-network
+    restart: unless-stopped
+
+  client:
+    build: ./client
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - server
+    networks:
+      - tafsad-network
+    restart: unless-stopped
+
+  admin-panel:
+    build: ./admin-panel
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - server
+    networks:
+      - tafsad-network
+    restart: unless-stopped
+
+networks:
+  tafsad-network:
+    driver: bridge
