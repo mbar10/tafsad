@@ -17,26 +17,63 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    setIsAuthenticated(false);
+    setForms([]);
+    setLoginError('');
+    // Force navigation to login page
+    navigate('/login', { replace: true });
+  };
+
   const fetchForms = async (token) => {
     try {
-      const response = await fetch('http://localhost:5000/api/forms', {
+      const response = await fetch('http://server:5000/api/forms', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
+      
+      if (response.status === 401) {
+        const data = await response.json();
+        if (data.code === 'TOKEN_EXPIRED') {
+          // Try to refresh the token
+          const refreshResponse = await fetch('http://server:5000/api/admin/refresh-token', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (refreshResponse.ok) {
+            const { token: newToken } = await refreshResponse.json();
+            localStorage.setItem('adminToken', newToken);
+            // Retry the original request with new token
+            return fetchForms(newToken);
+          }
+        }
+        // If refresh failed or token is invalid, redirect to login
+        handleLogout();
+        return;
+      }
+      
       if (response.ok) {
         const data = await response.json();
         setForms(data);
+      } else {
+        // Handle other error cases
+        handleLogout();
       }
     } catch (error) {
       console.error('Error fetching forms:', error);
+      handleLogout();
     }
   };
 
   const handleLogin = async (username, password) => {
     try {
       setLoginError('');
-      const response = await fetch('http://localhost:5000/api/admin/login', {
+      const response = await fetch('http://server:5000/api/admin/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -49,7 +86,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('adminToken', token);
         setIsAuthenticated(true);
         await fetchForms(token);
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
       } else {
         setLoginError('שם משתמש או סיסמה שגויים');
       }
@@ -57,14 +94,6 @@ export const AuthProvider = ({ children }) => {
       console.error('Login error:', error);
       setLoginError('אירעה שגיאה בהתחברות');
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    setIsAuthenticated(false);
-    setForms([]);
-    setLoginError('');
-    navigate('/');
   };
 
   const handleSort = (sortBy, sortOrder) => {
@@ -85,7 +114,12 @@ export const AuthProvider = ({ children }) => {
   const handleUpdateColumn = async (formId, columnId) => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:5000/api/forms/${formId}/column`, {
+      if (!token) {
+        handleLogout();
+        return;
+      }
+
+      const response = await fetch(`http://server:5000/api/forms/${formId}/column`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -94,22 +128,53 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ columnId })
       });
 
+      if (response.status === 401) {
+        const data = await response.json();
+        if (data.code === 'TOKEN_EXPIRED') {
+          // Try to refresh the token
+          const refreshResponse = await fetch('http://server:5000/api/admin/refresh-token', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (refreshResponse.ok) {
+            const { token: newToken } = await refreshResponse.json();
+            localStorage.setItem('adminToken', newToken);
+            // Retry the original request with new token
+            return handleUpdateColumn(formId, columnId);
+          }
+        }
+        // If refresh failed or token is invalid, redirect to login
+        handleLogout();
+        return;
+      }
+
       if (response.ok) {
         setForms(prevForms => 
           prevForms.map(form => 
             form.id === formId ? { ...form, columnId } : form
           )
         );
+      } else {
+        handleLogout();
       }
     } catch (error) {
       console.error('Error updating column:', error);
+      handleLogout();
     }
   };
 
   const handleUpdatePunishment = async (formId, punishment) => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:5000/api/forms/${formId}/punishment`, {
+      if (!token) {
+        handleLogout();
+        return;
+      }
+
+      const response = await fetch(`http://server:5000/api/forms/${formId}/punishment`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -118,15 +183,41 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ punishment })
       });
 
+      if (response.status === 401) {
+        const data = await response.json();
+        if (data.code === 'TOKEN_EXPIRED') {
+          // Try to refresh the token
+          const refreshResponse = await fetch('http://server:5000/api/admin/refresh-token', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (refreshResponse.ok) {
+            const { token: newToken } = await refreshResponse.json();
+            localStorage.setItem('adminToken', newToken);
+            // Retry the original request with new token
+            return handleUpdatePunishment(formId, punishment);
+          }
+        }
+        // If refresh failed or token is invalid, redirect to login
+        handleLogout();
+        return;
+      }
+
       if (response.ok) {
         setForms(prevForms =>
           prevForms.map(form =>
             form.id === formId ? { ...form, punishment } : form
           )
         );
+      } else {
+        handleLogout();
       }
     } catch (error) {
       console.error('Error updating punishment:', error);
+      handleLogout();
     }
   };
 
