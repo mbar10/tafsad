@@ -27,11 +27,17 @@ const COLUMNS = [{
 }
 ];
 
-const database = new Database(process.env.MONGO_URI || 'mongodb://localhost:27017/myapp');
+const database = new Database(process.env.MONGO_URI || 'mongodb://mongo:27017/myapp');
 
 database.connect()
 
+app.use((req, res, next) => {
+  console.log(`recived: ${req.url}`)
+  next()
+})
+
 app.use(cors());
+
 
 app.use(express.json());
 

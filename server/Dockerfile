@@ -1,35 +1,22 @@
-FROM node:18-alpine
+# Use official Node.js image
+FROM node:18
 
+# Set working directory
 WORKDIR /app
 
-# Install build dependencies for better-sqlite3
-RUN apk add --no-cache \
-    python3 \
-    make \
-    g++ \
-    sqlite-dev \
-    git \
-    build-base
-
-# Create data directory and set permissions
-RUN mkdir -p /app/data && chown -R node:node /app/data
-
-# Copy package files
+# Copy dependency files
 COPY package*.json ./
 
 # Install dependencies
 RUN npm install
 
-# Copy source code
+# Copy the rest of the app
 COPY . .
 
-# Build TypeScript
+# Build the TypeScript code
 RUN npm run build
 
-# Switch to non-root user
-USER node
-
-# Expose port
+# Expose the port your app uses (adjust if different)
 EXPOSE 5000
 
 # Start the server
