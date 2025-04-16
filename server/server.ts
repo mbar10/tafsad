@@ -27,7 +27,7 @@ const COLUMNS = [{
 }
 ];
 
-const database = new Database(process.env.MONGO_URI || 'mongodb://mongo:27017/myapp');
+const database = new Database(process.env.MONGO_URI || 'mongodb://localhost:27017/forms');
 
 database.connect()
 

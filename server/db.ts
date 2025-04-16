@@ -11,9 +11,7 @@ export class Database {
 
   async connect(): Promise<void> {
     try {
-      await mongoose.connect(this.uri, {
-        dbName: 'your-db-name', // Optional: overrides db name in URI
-      });
+      await mongoose.connect(this.uri);
       console.log('✅ Connected to MongoDB');
     } catch (err) {
       console.error('MongoDB connection error:', err);

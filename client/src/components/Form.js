@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import './Form.css';
+import { getConfig } from '../config';
 
-function Form({ onFormSubmit, onSuccess }) {
+function Form({ onSuccess }) {
   const [formData, setFormData] = useState({
     name: '',
     id: '',
@@ -25,7 +26,8 @@ function Form({ onFormSubmit, onSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/forms', {
+      const {serverUrl} = getConfig();
+      const response = await fetch(`${serverUrl}/api/forms`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -44,7 +46,6 @@ function Form({ onFormSubmit, onSuccess }) {
           requestDateTime: new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' })
             .replace(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2})/, '$3-$2-$1T$4:$5')
         });
-        onFormSubmit();
         onSuccess();
       }
     } catch (error) {
