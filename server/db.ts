@@ -42,7 +42,6 @@ export class Database {
 
   async updateFormPunishment(id: string, punishment: string): Promise<void> {
     const result = await Form.updateOne({ id }, { punishment });
-    if (result.modifiedCount === 0) throw new Error('Form not found');
   }
 
 
