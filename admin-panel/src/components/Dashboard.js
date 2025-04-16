@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { useAuth } from '../contexts/AuthContext';
 import './Dashboard.css';
+import { getConfig } from '../config';
 
 const Dashboard = ({
   onLogout,
@@ -37,8 +38,9 @@ const Dashboard = ({
   useEffect(() => {
     const fetchColumns = async () => {
       try {
+        const { serverUrl }  = getConfig();
         const token = localStorage.getItem('adminToken');
-        const response = await fetch('http://localhost:5000/api/columns', {
+        const response = await fetch(`${serverUrl}/api/columns`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -54,7 +56,8 @@ const Dashboard = ({
 
     const fetchPendingForms = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/pending-forms');
+        const { serverUrl }  = getConfig();
+        const response = await fetch(`${serverUrl}/api/pending-forms`);
         if (response.ok) {
           const data = await response.json();
           setPendingForms(data);
@@ -119,8 +122,9 @@ const Dashboard = ({
     if (!selectedForm || !newComment.trim()) return;
 
     try {
+      const { serverUrl }  = getConfig();
       const token = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:5000/api/forms/${selectedForm.id}/comments`, {
+      const response = await fetch(`${serverUrl}/api/forms/${selectedForm.id}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,8 +148,9 @@ const Dashboard = ({
 
   const handleCreateForm = async () => {
     try {
+      const { serverUrl }  = getConfig();
       const token = localStorage.getItem('adminToken');
-      const response = await fetch('http://localhost:5000/api/forms', {
+      const response = await fetch(`${serverUrl}/api/forms`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -180,7 +185,8 @@ const Dashboard = ({
     if (!newPendingForm.name.trim() || !newPendingForm.eventDescription.trim()) return;
 
     try {
-      const response = await fetch('http://localhost:5000/api/pending-forms', {
+      const { serverUrl }  = getConfig();
+      const response = await fetch(`${serverUrl}/api/pending-forms`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -200,7 +206,8 @@ const Dashboard = ({
 
   const handleDeletePendingForm = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/pending-forms/${id}`, {
+      const { serverUrl }  = getConfig();
+      const response = await fetch(`${serverUrl}/api/pending-forms/${id}`, {
         method: 'DELETE'
       });
 

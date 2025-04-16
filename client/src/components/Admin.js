@@ -18,9 +18,10 @@ function Admin({ forms }) {
   }, []);
 
   const handleLogin = async (e) => {
+    const { serverUrl }  = getConfig();
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/auth', {
+      const response = await fetch(`${serverUrl}/api/auth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
