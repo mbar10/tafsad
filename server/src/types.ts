@@ -15,6 +15,12 @@ export interface Form {
   comments: Comment[];
 }
 
+export interface PendingForm {
+  name: string;
+  commander: string;
+  eventDescription: string; 
+}
+
 export interface Comment {
   id: string;
   text: string;

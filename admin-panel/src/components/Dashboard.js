@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import Select from "react-select"
 import { useAuth } from '../contexts/AuthContext';
 import './Dashboard.css';
 import { getConfig } from '../config';
@@ -9,36 +10,23 @@ const Dashboard = ({
   onSort,
   onUpdateColumn,
   onUpdatePunishment,
-  onUpdateFormColumn,
-  onAddComment,
-  onUpdateForm
 }) => {
-  const { forms } = useAuth();
+  const { forms, pendingForms, AddPendingForm, handleDeletePendingForm, handleMergePendingForm } = useAuth();
   const [columns, setColumns] = useState([]);
-  const [pendingForms, setPendingForms] = useState([]);
   const [selectedForm, setSelectedForm] = useState(null);
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
   const [newComment, setNewComment] = useState('');
   const [newPendingForm, setNewPendingForm] = useState({
     name: '',
-    eventDescription: ''
-  });
-  const [newFormData, setNewFormData] = useState({
-    name: '',
-    occurrence: '',
     commander: '',
-    date: new Date().toISOString().split('T')[0],
-    requestDateTime: new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' })
-      .replace(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2})/, '$3-$2-$1T$4:$5'),
-    damage: '',
-    prevention: ''
+    eventDescription: ''
   });
 
   useEffect(() => {
     const fetchColumns = async () => {
       try {
-        const { serverUrl }  = getConfig();
+        const { serverUrl } = getConfig();
         const token = localStorage.getItem('adminToken');
         const response = await fetch(`${serverUrl}/api/columns`, {
           headers: {
@@ -54,22 +42,25 @@ const Dashboard = ({
       }
     };
 
-    const fetchPendingForms = async () => {
-      try {
-        const { serverUrl }  = getConfig();
-        const response = await fetch(`${serverUrl}/api/pending-forms`);
-        if (response.ok) {
-          const data = await response.json();
-          setPendingForms(data);
-        }
-      } catch (error) {
-        console.error('Error fetching pending forms:', error);
-      }
-    };
-
     fetchColumns();
-    fetchPendingForms();
   }, []);
+
+  const handleMergeWithPending = async (selectedOption) => {
+    const newforms = await handleMergePendingForm(selectedForm.id, selectedOption.value)
+    setSelectedForm(prev => newforms.find(item => item.id === prev.id))
+  }
+
+  const handleAddPendingForm = async () => {
+    if (!newPendingForm.name.trim()
+      || !newPendingForm.commander.trim()
+      || !newPendingForm.eventDescription.trim()) return;
+    try {
+      await AddPendingForm(newPendingForm);
+      setNewPendingForm({ name: '', eventDescription: '', commander: '' });
+    } catch (error) {
+      console.error('Error adding pending form:', error);
+    }
+  }
 
   const handleSortChange = (newSortBy, newSortOrder) => {
     setSortBy(newSortBy);
@@ -122,7 +113,7 @@ const Dashboard = ({
     if (!selectedForm || !newComment.trim()) return;
 
     try {
-      const { serverUrl }  = getConfig();
+      const { serverUrl } = getConfig();
       const token = localStorage.getItem('adminToken');
       const response = await fetch(`${serverUrl}/api/forms/${selectedForm.id}/comments`, {
         method: 'POST',
@@ -146,78 +137,6 @@ const Dashboard = ({
     }
   };
 
-  const handleCreateForm = async () => {
-    try {
-      const { serverUrl }  = getConfig();
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${serverUrl}/api/forms`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          ...newFormData,
-          columnId: columns[0].id // Add to first column by default
-        })
-      });
-
-      if (response.ok) {
-        const newForm = await response.json();
-        onUpdateForm(newForm);
-        setNewFormData({
-          name: '',
-          occurrence: '',
-          commander: '',
-          date: new Date().toISOString().split('T')[0],
-          requestDateTime: new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' })
-            .replace(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2})/, '$3-$2-$1T$4:$5'),
-          damage: '',
-          prevention: ''
-        });
-      }
-    } catch (error) {
-      console.error('Error creating form:', error);
-    }
-  };
-
-  const handleAddPendingForm = async () => {
-    if (!newPendingForm.name.trim() || !newPendingForm.eventDescription.trim()) return;
-
-    try {
-      const { serverUrl }  = getConfig();
-      const response = await fetch(`${serverUrl}/api/pending-forms`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(newPendingForm)
-      });
-
-      if (response.ok) {
-        const newForm = await response.json();
-        setPendingForms(prev => [...prev, newForm]);
-        setNewPendingForm({ name: '', eventDescription: '' });
-      }
-    } catch (error) {
-      console.error('Error adding pending form:', error);
-    }
-  };
-
-  const handleDeletePendingForm = async (id) => {
-    try {
-      const { serverUrl }  = getConfig();
-      const response = await fetch(`${serverUrl}/api/pending-forms/${id}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok) {
-        setPendingForms(prev => prev.filter(form => form.id !== id));
-      }
-    } catch (error) {
-      console.error('Error deleting pending form:', error);
-    }
-  };
 
   return (
     <div className="dashboard">
@@ -256,15 +175,25 @@ const Dashboard = ({
                     value={newPendingForm.name}
                     onChange={(e) => setNewPendingForm(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="שם..."
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddPendingForm()}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddPendingForm()}
                   />
                 </div>
+                <div className="form-group">
+                  <input
+                    type="text"
+                    value={newPendingForm.commander}
+                    onChange={(e) => setNewPendingForm(prev => ({ ...prev, commander: e.target.value }))}
+                    placeholder="מפקד..."
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddPendingForm()}
+                  />
+                </div>
+
                 <div className="form-group">
                   <textarea
                     value={newPendingForm.eventDescription}
                     onChange={(e) => setNewPendingForm(prev => ({ ...prev, eventDescription: e.target.value }))}
                     placeholder="תיאור האירוע..."
-                    onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleAddPendingForm())}
+                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleAddPendingForm())}
                   />
                 </div>
                 <button onClick={handleAddPendingForm}>הוסף</button>
@@ -273,7 +202,9 @@ const Dashboard = ({
                 <div key={form.id} className="pending-form-card">
                   <div className="pending-form-content">
                     <div className="pending-form-name">{form.name}</div>
+                    <div className="pending-form-commander">{form.commander}</div>
                     <div className="pending-form-event">{form.eventDescription}</div>
+                    <div className="pending-form-time">{formatDateTime(form.createdAt)}</div>
                   </div>
                   <button
                     className="delete-btn"
@@ -364,6 +295,37 @@ const Dashboard = ({
                   placeholder="הכנס עונש..."
                   className="form-textarea"
                 />
+              </div>
+              <div className='pending-form-connection-section'>
+                <h3>התאמה ל"ממתין להגשה"</h3>
+                {
+                  selectedForm.connectedPendingForm
+                    ? <div key={selectedForm.connectedPendingForm.id} className="pending-form-card">
+                      <div className="pending-form-content">
+                        <div className="pending-form-name">{selectedForm.connectedPendingForm.name}</div>
+                        <div className="pending-form-commander">{selectedForm.connectedPendingForm.commander}</div>
+                        <div className="pending-form-event">{selectedForm.connectedPendingForm.eventDescription}</div>
+                        <div className="pending-form-time">{formatDateTime(selectedForm.connectedPendingForm.createdAt)}</div>
+                      </div>
+                    </div>
+                    : <div className='pending-form-selection'>
+                      <Select onChange={handleMergeWithPending} options={pendingForms.map(pendingForm => ({
+                        value: pendingForm.id,
+                        label: (
+                          <div key={pendingForm.id} className="pending-form-card">
+                            <div className="pending-form-content">
+                              <div className="pending-form-name">{pendingForm.name}</div>
+                              <div className="pending-form-commander">{pendingForm.commander}</div>
+                              <div className="pending-form-event">{pendingForm.eventDescription}</div>
+                              <div className="pending-form-time">{formatDateTime(pendingForm.createdAt)}</div>
+                            </div>
+                          </div>
+                        )
+                      })
+                      )}
+                        formatOptionLabel={(option) => option.label} />
+                    </div>
+                }
               </div>
               <div className="comments-section">
                 <h3>הערות</h3>

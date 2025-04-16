@@ -7,6 +7,7 @@ const AuthContext = createContext(undefined);
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [forms, setForms] = useState([]);
+  const [pendingForms, setPendingForms] = useState([])
   const [loginError, setLoginError] = useState('');
   const navigate = useNavigate();
 
@@ -15,6 +16,7 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       setIsAuthenticated(true);
       fetchForms(token);
+      fetchPendingForms()
     }
   }, []);
 
@@ -29,16 +31,16 @@ export const AuthProvider = ({ children }) => {
 
   const fetchForms = async (token) => {
     try {
-      const { serverUrl }  = getConfig();
+      const { serverUrl } = getConfig();
       const response = await fetch(`${serverUrl}/api/forms`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       if (response.status === 401) {
         const data = await response.json();
-        const { serverUrl }  = getConfig();
+        const { serverUrl } = getConfig();
         if (data.code === 'TOKEN_EXPIRED') {
           const refreshResponse = await fetch(`${serverUrl}/api/admin/refresh-token`, {
             method: 'POST',
@@ -46,7 +48,7 @@ export const AuthProvider = ({ children }) => {
               'Authorization': `Bearer ${token}`
             }
           });
-          
+
           if (refreshResponse.ok) {
             const { token: newToken } = await refreshResponse.json();
             localStorage.setItem('adminToken', newToken);
@@ -58,7 +60,7 @@ export const AuthProvider = ({ children }) => {
         handleLogout();
         return;
       }
-      
+
       if (response.ok) {
         const data = await response.json();
         setForms(data);
@@ -75,7 +77,7 @@ export const AuthProvider = ({ children }) => {
   const handleLogin = async (username, password) => {
     try {
       setLoginError('');
-      const { serverUrl }  = getConfig();
+      const { serverUrl } = getConfig();
       const response = await fetch(`${serverUrl}/api/admin/login`, {
         method: 'POST',
         headers: {
@@ -102,7 +104,7 @@ export const AuthProvider = ({ children }) => {
   const handleSort = (sortBy, sortOrder) => {
     const sortedForms = [...forms].sort((a, b) => {
       if (sortBy === 'date') {
-        return sortOrder === 'asc' 
+        return sortOrder === 'asc'
           ? new Date(a.date).getTime() - new Date(b.date).getTime()
           : new Date(b.date).getTime() - new Date(a.date).getTime();
       } else {
@@ -114,9 +116,64 @@ export const AuthProvider = ({ children }) => {
     setForms(sortedForms);
   };
 
+  const fetchPendingForms = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const { serverUrl } = getConfig();
+      const response = await fetch(`${serverUrl}/api/pending-forms`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPendingForms(data);
+      }
+    } catch (error) {
+      console.error('Error fetching pending forms:', error);
+    }
+  };
+
+  const AddPendingForm = async (newPendingForm) => {
+      const token = localStorage.getItem('adminToken');
+      const { serverUrl } = getConfig();
+      const response = await fetch(`${serverUrl}/api/pending-forms`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(newPendingForm)
+      });
+
+      if (response.ok) {
+        const newForm = await response.json();
+        setPendingForms(prev => [...prev, newForm]);
+      }
+  };
+
+  const handleDeletePendingForm = async (id) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const { serverUrl } = getConfig();
+      const response = await fetch(`${serverUrl}/api/pending-forms/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+      });
+
+      if (response.ok) {
+        setPendingForms(prev => prev.filter(form => form.id !== id));
+      }
+    } catch (error) {
+      console.error('Error deleting pending form:', error);
+    }
+  };
+
   const handleUpdateColumn = async (formId, columnId) => {
     try {
-      const { serverUrl }  = getConfig();
+      const { serverUrl } = getConfig();
       const token = localStorage.getItem('adminToken');
       if (!token) {
         handleLogout();
@@ -134,7 +191,7 @@ export const AuthProvider = ({ children }) => {
 
       if (response.status === 401) {
         const data = await response.json();
-        const { serverUrl }  = getConfig();
+        const { serverUrl } = getConfig();
         if (data.code === 'TOKEN_EXPIRED') {
           // Try to refresh the token
           const refreshResponse = await fetch(`${serverUrl}/api/admin/refresh-token`, {
@@ -143,7 +200,7 @@ export const AuthProvider = ({ children }) => {
               'Authorization': `Bearer ${token}`
             }
           });
-          
+
           if (refreshResponse.ok) {
             const { token: newToken } = await refreshResponse.json();
             localStorage.setItem('adminToken', newToken);
@@ -157,8 +214,8 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (response.ok) {
-        setForms(prevForms => 
-          prevForms.map(form => 
+        setForms(prevForms =>
+          prevForms.map(form =>
             form.id === formId ? { ...form, columnId } : form
           )
         );
@@ -173,7 +230,7 @@ export const AuthProvider = ({ children }) => {
 
   const handleUpdatePunishment = async (formId, punishment) => {
     try {
-      const { serverUrl }  = getConfig();
+      const { serverUrl } = getConfig();
       const token = localStorage.getItem('adminToken');
       if (!token) {
         handleLogout();
@@ -190,24 +247,6 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (response.status === 401) {
-        const data = await response.json();
-        if (data.code === 'TOKEN_EXPIRED') {
-          // Try to refresh the token
-          const refreshResponse = await fetch(`${serverUrl}/api/admin/refresh-token`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          if (refreshResponse.ok) {
-            const { token: newToken } = await refreshResponse.json();
-            localStorage.setItem('adminToken', newToken);
-            // Retry the original request with new token
-            return handleUpdatePunishment(formId, punishment);
-          }
-        }
-        // If refresh failed or token is invalid, redirect to login
         handleLogout();
         return;
       }
@@ -227,17 +266,57 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const handleMergePendingForm = async (formId, pendingFormId) => {
+    try {
+      const { serverUrl } = getConfig();
+      const token = localStorage.getItem('adminToken');
+      if (!token) {
+        handleLogout();
+        return;
+      }
+      const response = await fetch(`${serverUrl}/api/merge/form/${formId}/pending/${pendingFormId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+      });
+
+      if (response.status === 401) {
+        handleLogout();
+        return;
+      }
+      if (response.ok) {
+        const newForms = forms.map(form =>
+          form.id === formId ? { ...form,
+            connectedPendingForm: pendingForms.find(item => item.id === pendingFormId) } : form
+        )
+        setForms(newForms);
+        setPendingForms(prevForms => prevForms.filter(item => item.id !== pendingFormId))
+        return newForms
+      }else{
+        console.error("failed merging with pending form", response)
+      }
+    } catch (error) {
+      console.error('Error updating punishment:', error);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
         isAuthenticated,
         forms,
+        pendingForms,
         loginError,
         handleLogin,
         handleLogout,
         handleSort,
         handleUpdateColumn,
-        handleUpdatePunishment
+        handleUpdatePunishment,
+        AddPendingForm,
+        handleDeletePendingForm,
+        handleMergePendingForm
       }}
     >
       {children}

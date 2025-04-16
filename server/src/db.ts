@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { Form, PendingForm } from "./models";
-import {Form as FormType} from "./types" 
+import {Form as FormType, PendingForm as PendingFormType} from "./types" 
 
 export class Database {
   private uri: string;
@@ -78,13 +78,14 @@ export class Database {
     await form.save();
   }
   
-  async createPendingForm(data: { name: string; eventDescription: string }) {
+  async createPendingForm(data: PendingFormType) {
     const now = new Date().toISOString();
     const id = Date.now().toString();
 
     const pendingForm = new PendingForm({
       id,
       name: data.name,
+      commander: data.commander,
       eventDescription: data.eventDescription,
       status: 'pending',
       createdAt: now,
@@ -105,13 +106,24 @@ export class Database {
     return form || null;
   }
 
-  async updatePendingFormStatus(id: string, status: string): Promise<void> {
-    const result = await PendingForm.updateOne({ id }, { status, updatedAt: new Date().toISOString() });
-    if (result.modifiedCount === 0) throw new Error('Pending form not found');
-  }
-
   async deletePendingForm(id: string): Promise<void> {
     const result = await PendingForm.deleteOne({ id });
     if (result.deletedCount === 0) throw new Error('Pending form not found');
   }
+
+  async mergePendingFormWithForm(pendingFormId: string, formId: string) {
+    const pendingForm = await PendingForm.findOne({ id: pendingFormId });
+    if (!pendingForm) throw new Error('Pending form not found');
+  
+    const form = await Form.findOne({ id: formId });
+    if (!form) throw new Error('Form not found');
+  
+    form.connectedPendingForm = pendingForm;
+    await form.save();
+    await PendingForm.deleteOne({ id: pendingFormId });
+    return form;
+  }
+  
+
+  
 }

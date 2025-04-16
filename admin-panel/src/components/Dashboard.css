@@ -755,6 +755,21 @@
   margin: 0;
 }
 
+.pending-form-commander {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.pending-form-time {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+
 .pending-form-event {
   color: #34495e;
   font-size: 0.9rem;

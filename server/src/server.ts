@@ -227,7 +227,7 @@ app.get('/api/columns', async (req: Request, res: Response) => {
 });
 
 // Get pending forms (forms in the first column)
-app.get('/api/pending-forms', async (req: Request, res: Response) => {
+app.get('/api/pending-forms', authenticateToken, async (req: Request, res: Response) => {
   try {
     const pendingForms = await database.getPendingForms();
     res.json(pendingForms);
@@ -252,50 +252,31 @@ app.get('/api/pending-forms/:id', async (req: Request, res: Response) => {
 });
 
 // Create a new pending form
-app.post('/api/pending-forms', async (req: Request, res: Response) => {
+app.post('/api/pending-forms', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const { name, eventDescription } = req.body;
+    const { name, commander, eventDescription } = req.body;
     
     // Validate required fields
-    if (!name || !eventDescription) {
+    if (!name || !eventDescription || !commander) {
       return res.status(400).json({ 
         message: 'Missing required fields',
         details: {
           name: !name,
+          commander: !commander,
           eventDescription: !eventDescription
         }
       });
     }
     
-    const pendingForm = await database.createPendingForm({ name, eventDescription });
+    const pendingForm = await database.createPendingForm({ name, commander, eventDescription });
     res.status(201).json(pendingForm);
   } catch (error) {
     res.status(500).json({ message: 'Error creating pending form', error: (error as Error).message });
   }
 });
 
-// Update pending form status
-app.patch('/api/pending-forms/:id/status', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-    if (!status) {
-      res.status(400).json({ message: 'Status is required' });
-      return;
-    }
-    await database.updatePendingFormStatus(id, status);
-    res.json({ message: 'Pending form status updated successfully' });
-  } catch (error) {
-    if ((error as Error).message === 'Pending form not found') {
-      res.status(404).json({ message: 'Pending form not found' });
-    } else {
-      res.status(500).json({ message: 'Error updating pending form status', error: (error as Error).message });
-    }
-  }
-});
-
 // Delete pending form
-app.delete('/api/pending-forms/:id', async (req: Request, res: Response) => {
+app.delete('/api/pending-forms/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     await database.deletePendingForm(id);
@@ -357,6 +338,22 @@ app.delete('/api/forms/:formId/comments/:commentId', authenticateToken, async (r
     }
   }
 });
+
+app.patch("/api/merge/form/:formId/pending/:pendingFormId", authenticateToken, async (req: Request, res: Response) => {
+  try{
+    const {formId, pendingFormId} = req.params;
+    await database.mergePendingFormWithForm(pendingFormId, formId);
+    res.status(200).json({message: "success"})
+  }catch(error){
+    if((error as Error).message === 'Pending form not found'){
+      res.status(404).json({ message: 'pending form not found' });
+    } else if ((error as Error).message === 'Form not found'){
+      res.status(404).json({ message: 'Form not found' });
+    } else{
+      res.status(500).json({ message: 'Error merging pending form', error: (error as Error).message });
+    }
+  }
+})
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
