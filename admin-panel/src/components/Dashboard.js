@@ -238,9 +238,9 @@ const Dashboard = ({
                               {...provided.dragHandleProps}
                               onClick={() => setSelectedForm(form)}
                             >
-                              <h3>ממלא: {form.connectedPendingForm.name || form.name}</h3>
-                              <p className="commander">מפקד: {form.connectedPendingForm.commander || form.commander}</p>
-                              <p className="event-description">אירוע: {form.connectedPendingForm.eventDescription || form.occurrence}</p>
+                              <h3>ממלא: {form?.connectedPendingForm?.name || form.name}</h3>
+                              <p className="commander">מפקד: {form?.connectedPendingForm?.commander || form.commander}</p>
+                              <p className="event-description">אירוע: {form?.connectedPendingForm?.eventDescription || form.occurrence}</p>
                               <p className="form-date">{formatDateTime(form.date)}</p>
                               {form.punishment && (
                                 <p className="punishment-preview">{form.punishment}</p>
