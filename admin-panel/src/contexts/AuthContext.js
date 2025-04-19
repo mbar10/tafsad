@@ -307,6 +307,7 @@ export const AuthProvider = ({ children }) => {
       value={{
         isAuthenticated,
         forms,
+        setForms,
         pendingForms,
         loginError,
         handleLogin,

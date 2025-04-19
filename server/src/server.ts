@@ -105,18 +105,17 @@ app.post('/api/forms', async (req: Request, res: Response) => {
   try {
     console.log('Received form data:', req.body);
     
-    const { name, occurrence, commander, date, requestDateTime, damage, prevention, columnId } = req.body;
+    const { name, occurrence, commander, requestDateTime, damage, prevention, columnId } = req.body;
     
     // Validate required fields
-    if (!name || !occurrence || !commander || !date || !requestDateTime || !damage || !prevention) {
-      console.log('Missing required fields:', { name, occurrence, commander, date, requestDateTime, damage, prevention });
+    if (!name || !occurrence || !commander || !requestDateTime || !damage || !prevention) {
+      console.log('Missing required fields:', { name, occurrence, commander, requestDateTime, damage, prevention });
       return res.status(400).json({ 
         message: 'Missing required fields',
         details: {
           name: !name,
           occurrence: !occurrence,
           commander: !commander,
-          date: !date,
           requestDateTime: !requestDateTime,
           damage: !damage,
           prevention: !prevention
@@ -157,7 +156,6 @@ app.post('/api/forms', async (req: Request, res: Response) => {
       }
     };
 
-    const parsedDate = parseDate(date);
     const parsedRequestDateTime = parseDate(requestDateTime);
     const id = randomUUID()
     const newForm = await database.createForm({
@@ -165,7 +163,7 @@ app.post('/api/forms', async (req: Request, res: Response) => {
       name,
       occurrence,
       commander,
-      date: parsedDate,
+      date: new Date().toISOString(),
       requestDateTime: parsedRequestDateTime,
       damage,
       prevention,
@@ -354,6 +352,21 @@ app.patch("/api/merge/form/:formId/pending/:pendingFormId", authenticateToken, a
     }
   }
 })
+
+// Delete form
+app.delete('/api/forms/:id', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await database.deleteForm(id);
+    res.status(204).send();
+  } catch (error) {
+    if ((error as Error).message === 'Form not found') {
+      res.status(404).json({ message: 'Form not found' });
+    } else {
+      res.status(500).json({ message: 'Error deleting form', error: (error as Error).message });
+    }
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

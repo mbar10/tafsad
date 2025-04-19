@@ -34,6 +34,13 @@ export class Database {
   }
 
   async updateFormColumn(id: string, columnId: string): Promise<void> {
+    const form = await Form.findOne({ id }).lean();
+    if (!form) throw new Error('Form not found');
+    
+    // If the form is already in the requested column, return without updating
+    if (form.columnId === columnId) return;
+    
+    // Otherwise, update the column
     const result = await Form.updateOne({ id }, { columnId });
     if (result.modifiedCount === 0) throw new Error('Form not found');
   }
@@ -123,7 +130,9 @@ export class Database {
     await PendingForm.deleteOne({ id: pendingFormId });
     return form;
   }
-  
 
-  
+  async deleteForm(id: string): Promise<void> {
+    const result = await Form.deleteOne({ id });
+    if (result.deletedCount === 0) throw new Error('Form not found');
+  }
 }

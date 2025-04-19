@@ -7,15 +7,12 @@ import { getConfig } from '../config';
 
 const Dashboard = ({
   onLogout,
-  onSort,
   onUpdateColumn,
   onUpdatePunishment,
 }) => {
-  const { forms, pendingForms, AddPendingForm, handleDeletePendingForm, handleMergePendingForm } = useAuth();
+  const { forms, setForms, pendingForms, AddPendingForm, handleDeletePendingForm, handleMergePendingForm } = useAuth();
   const [columns, setColumns] = useState([]);
   const [selectedForm, setSelectedForm] = useState(null);
-  const [sortBy, setSortBy] = useState('date');
-  const [sortOrder, setSortOrder] = useState('desc');
   const [newComment, setNewComment] = useState('');
   const [newPendingForm, setNewPendingForm] = useState({
     name: '',
@@ -62,12 +59,6 @@ const Dashboard = ({
     }
   }
 
-  const handleSortChange = (newSortBy, newSortOrder) => {
-    setSortBy(newSortBy);
-    setSortOrder(newSortOrder);
-    onSort(newSortBy, newSortOrder);
-  };
-
   const handleDragEnd = async (result) => {
     if (!result.destination) return;
 
@@ -84,6 +75,14 @@ const Dashboard = ({
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const truncateText = (text, wordLimit) => {
+    const words = text.split(' ');
+    if (words.length > wordLimit) {
+      return words.slice(0, wordLimit).join(' ') + '...';
+    }
+    return text;
   };
 
   const exportToCSV = () => {
@@ -137,6 +136,26 @@ const Dashboard = ({
     }
   };
 
+  const handleDeleteForm = async (formId) => {
+    try {
+      const { serverUrl } = getConfig();
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${serverUrl}/api/forms/${formId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        // Update the forms state by filtering out the deleted form
+        setForms(prevForms => prevForms.filter(form => form.id !== formId));
+        setSelectedForm(null);
+      }
+    } catch (error) {
+      console.error('Error deleting form:', error);
+    }
+  };
 
   return (
     <div className="dashboard">
@@ -146,21 +165,6 @@ const Dashboard = ({
           <button className="export-btn" onClick={exportToCSV}>ייצוא ל-CSV</button>
           <button className="logout-btn" onClick={onLogout}>התנתק</button>
         </div>
-      </div>
-
-      <div className="sort-controls">
-        <button
-          className={`sort-btn ${sortBy === 'date' ? 'active' : ''}`}
-          onClick={() => handleSortChange('date', sortOrder === 'asc' ? 'desc' : 'asc')}
-        >
-          מיון לפי תאריך {sortOrder === 'asc' ? '↑' : '↓'}
-        </button>
-        <button
-          className={`sort-btn ${sortBy === 'name' ? 'active' : ''}`}
-          onClick={() => handleSortChange('name', sortOrder === 'asc' ? 'desc' : 'asc')}
-        >
-          מיון לפי שם {sortOrder === 'asc' ? '↑' : '↓'}
-        </button>
       </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>
@@ -174,7 +178,7 @@ const Dashboard = ({
                     type="text"
                     value={newPendingForm.name}
                     onChange={(e) => setNewPendingForm(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="שם..."
+                    placeholder="שם חניך..."
                     onKeyDown={(e) => e.key === 'Enter' && handleAddPendingForm()}
                   />
                 </div>
@@ -183,7 +187,7 @@ const Dashboard = ({
                     type="text"
                     value={newPendingForm.commander}
                     onChange={(e) => setNewPendingForm(prev => ({ ...prev, commander: e.target.value }))}
-                    placeholder="מפקד..."
+                    placeholder="שם מפקד..."
                     onKeyDown={(e) => e.key === 'Enter' && handleAddPendingForm()}
                   />
                 </div>
@@ -238,17 +242,19 @@ const Dashboard = ({
                               {...provided.dragHandleProps}
                               onClick={() => setSelectedForm(form)}
                             >
-                              <h3>ממלא: {form?.connectedPendingForm?.name || form.name}</h3>
-                              <p className="commander">מפקד: {form?.connectedPendingForm?.commander || form.commander}</p>
-                              <p className="event-description">אירוע: {form?.connectedPendingForm?.eventDescription || form.occurrence}</p>
-                              <p className="form-date">{formatDateTime(form.date)}</p>
-                              {form.punishment && (
-                                <p className="punishment-preview">{form.punishment}</p>
-                              )}
-                              {form.comments && form.comments.length > 0 && (
-                                <div className="comment-count">{form.comments.length}</div>
-                              )}
-                              <div className="commander-tag">{form.commander}</div>
+                              <div className="commander-tag">{form?.connectedPendingForm?.commander || form.commander}</div>
+                              <div className="hanich-tag">{form?.connectedPendingForm?.name || form.name}</div>
+                              <div style={{ marginTop: "2rem" }}>
+                                <p className="event-description">אירוע: {truncateText(form?.connectedPendingForm?.eventDescription || form.occurrence, 15)}</p>
+                                <p className="form-date">תאריך האירוע: {formatDateTime(form.requestDateTime)}</p>
+                                <p className="form-date">תאריך הדיווח: {formatDateTime(form.date)}</p>
+                                {form.punishment && (
+                                  <p className="punishment-preview">{form.punishment}</p>
+                                )}
+                                {form.comments && form.comments.length > 0 && (
+                                  <div className="comment-count">{form.comments.length}</div>
+                                )}
+                              </div>
                             </div>
                           )}
                         </Draggable>
@@ -272,7 +278,9 @@ const Dashboard = ({
               onUpdatePunishment(selectedForm.id, selectedForm.punishment);
               setSelectedForm(null);
             }}>×</button>
-            <h2>פרטי טופס</h2>
+            <div className="modal-header">
+              <h2>פרטי טופס</h2>
+            </div>
             <div className="form-details">
               <p><strong>שם מלא:</strong> {selectedForm.name}</p>
               <p><strong>תיאור אירוע:</strong> {selectedForm.occurrence}</p>
@@ -348,6 +356,17 @@ const Dashboard = ({
                   />
                   <button onClick={handleAddComment}>הוסף הערה</button>
                 </div>
+              </div>
+              <div className="delete-form-section">
+                <button 
+                  className="delete-form-btn"
+                  onClick={() => {
+                    handleDeleteForm(selectedForm.id);
+                    setSelectedForm(null);
+                  }}
+                >
+                  מחק טופס
+                </button>
               </div>
             </div>
           </div>
