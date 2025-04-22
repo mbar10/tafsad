@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import Select from "react-select"
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import './Dashboard.css';
-import { getConfig } from '../config';
+import { getConfig } from '../../config';
 
 const Dashboard = ({
   onLogout,
