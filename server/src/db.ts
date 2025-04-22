@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { Form, PendingForm } from "./models";
-import {Form as FormType, PendingForm as PendingFormType} from "./types" 
+import { Form as FormType, PendingForm as PendingFormType } from "./types"
 
 export class Database {
   private uri: string;
@@ -30,16 +30,16 @@ export class Database {
   }
 
   async getAllForms(): Promise<FormType[]> {
-    return Form.find().lean();
+    return Form.find().populate('connectedPendingForm').lean();
   }
 
   async updateFormColumn(id: string, columnId: string): Promise<void> {
     const form = await Form.findOne({ id }).lean();
     if (!form) throw new Error('Form not found');
-    
+
     // If the form is already in the requested column, return without updating
     if (form.columnId === columnId) return;
-    
+
     // Otherwise, update the column
     const result = await Form.updateOne({ id }, { columnId });
     if (result.modifiedCount === 0) throw new Error('Form not found');
@@ -80,11 +80,11 @@ export class Database {
   async deleteComment(formId: string, commentId: string): Promise<void> {
     const form = await Form.findOne({ id: formId });
     if (!form) throw new Error('Form not found');
-  
+
     form.comments.pull({ id: commentId });
     await form.save();
   }
-  
+
   async createPendingForm(data: PendingFormType) {
     const now = new Date().toISOString();
     const id = Date.now().toString();
@@ -95,6 +95,7 @@ export class Database {
       commander: data.commander,
       eventDescription: data.eventDescription,
       status: 'pending',
+      isConnectedWithForm: false,
       createdAt: now,
       updatedAt: now
     });
@@ -104,7 +105,7 @@ export class Database {
   }
 
   async getPendingForms() {
-    const rows = await PendingForm.find().sort({ createdAt: -1 }).lean();
+    const rows = await PendingForm.find({ isConnectedWithForm: false }).sort({ createdAt: -1 }).lean();
     return rows;
   }
 
@@ -121,15 +122,36 @@ export class Database {
   async mergePendingFormWithForm(pendingFormId: string, formId: string) {
     const pendingForm = await PendingForm.findOne({ id: pendingFormId });
     if (!pendingForm) throw new Error('Pending form not found');
-  
+
     const form = await Form.findOne({ id: formId });
     if (!form) throw new Error('Form not found');
-  
-    form.connectedPendingForm = pendingForm;
+
+    form.connectedPendingForm = pendingForm.toObject();
     await form.save();
-    await PendingForm.deleteOne({ id: pendingFormId });
+    const result = await PendingForm.updateOne({ id: pendingFormId }, { isConnectedWithForm: true });
+    if (result.modifiedCount === 0) throw new Error('pending Form not found');
+
     return form;
   }
+
+
+  async unmergePendingFormFromForm(formId: string) {
+    const form = await Form.findOne({ id: formId }).populate('connectedPendingForm');
+    if (!form) throw new Error('Form not found');
+
+    const connectedPendingForm = form.connectedPendingForm;
+    if (!connectedPendingForm) throw new Error('No connected pending form to unmerge');
+
+    form.connectedPendingForm = null as any;
+
+    const result = await PendingForm.updateOne({ _id: connectedPendingForm._id }, { isConnectedWithForm: false });
+    if (result.modifiedCount === 0) throw new Error('pending Form not found');
+    await form.save();
+
+    return connectedPendingForm
+  }
+
+
 
   async deleteForm(id: string): Promise<void> {
     const result = await Form.deleteOne({ id });

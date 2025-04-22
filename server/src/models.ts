@@ -13,6 +13,7 @@ const PendingFormSchema = new mongoose.Schema({
   eventDescription: String,
   createdAt: String,
   updatedAt: String,
+  isConnectedWithForm: Boolean
 });
 
 const FormSchema = new mongoose.Schema({
@@ -28,15 +29,9 @@ const FormSchema = new mongoose.Schema({
   columnId: String,
   punishment: String,
   comments: { type: [CommentSchema], default: [] },
-  connectedPendingForm: { type: PendingFormSchema, default: null }
+  connectedPendingForm: { type: mongoose.Schema.Types.ObjectId, ref: 'PendingForm', default: null }
 });
 
-const ColumnSchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true },
-  title: String,
-  order: Number,
-});
 
 export const Form = mongoose.model('Form', FormSchema);
-export const Column = mongoose.model('Column', ColumnSchema);
 export const PendingForm = mongoose.model('PendingForm', PendingFormSchema);

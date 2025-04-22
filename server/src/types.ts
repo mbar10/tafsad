@@ -13,6 +13,7 @@ export interface Form {
   columnId: string;
   punishment: string;
   comments: Comment[];
+  connectedPendingForm?: PendingForm
 }
 
 export interface PendingForm {

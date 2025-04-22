@@ -302,6 +302,50 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const handleUnmergePendingForm = async (formId) => {
+    try {
+      const { serverUrl } = getConfig();
+      const token = localStorage.getItem('adminToken');
+      if (!token) {
+        handleLogout();
+        return;
+      }
+  
+      const response = await fetch(`${serverUrl}/api/unmerge/form/${formId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+  
+      if (response.status === 401) {
+        handleLogout();
+        return;
+      }
+  
+      if (response.ok) {
+        const data = await response.json();
+        const newPendingForm = data.pendingForm;
+  
+        // Remove the connectedPendingForm from the form
+        const updatedForms = forms.map(form =>
+          form.id === formId ? { ...form, connectedPendingForm: null } : form
+        );
+  
+        setForms(updatedForms);
+        setPendingForms(prev => [...prev, newPendingForm]); // add it back to the list
+  
+        return newPendingForm;
+      } else {
+        console.error("Failed unmerging pending form", response);
+      }
+    } catch (error) {
+      console.error("Error unmerging pending form:", error);
+    }
+  };
+  
+
   return (
     <AuthContext.Provider
       value={{
@@ -317,7 +361,8 @@ export const AuthProvider = ({ children }) => {
         handleUpdatePunishment,
         AddPendingForm,
         handleDeletePendingForm,
-        handleMergePendingForm
+        handleMergePendingForm,
+        handleUnmergePendingForm 
       }}
     >
       {children}

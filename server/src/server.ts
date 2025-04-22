@@ -353,6 +353,23 @@ app.patch("/api/merge/form/:formId/pending/:pendingFormId", authenticateToken, a
   }
 })
 
+app.patch("/api/unmerge/form/:formId", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { formId } = req.params;
+    const recreatedPendingForm = await database.unmergePendingFormFromForm(formId);
+    res.status(200).json({ message: "success", pendingForm: recreatedPendingForm });
+  } catch (error) {
+    if ((error as Error).message === 'Form not found') {
+      res.status(404).json({ message: 'Form not found' });
+    } else if ((error as Error).message === 'No connected pending form to unmerge') {
+      res.status(400).json({ message: 'No connected pending form to unmerge' });
+    } else {
+      res.status(500).json({ message: 'Error unmerging form', error: (error as Error).message });
+    }
+  }
+});
+
+
 // Delete form
 app.delete('/api/forms/:id', authenticateToken, async (req: Request, res: Response) => {
   try {

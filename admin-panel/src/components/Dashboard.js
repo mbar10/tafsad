@@ -10,7 +10,7 @@ const Dashboard = ({
   onUpdateColumn,
   onUpdatePunishment,
 }) => {
-  const { forms, setForms, pendingForms, AddPendingForm, handleDeletePendingForm, handleMergePendingForm } = useAuth();
+  const { forms, setForms, pendingForms, AddPendingForm, handleUnmergePendingForm, handleDeletePendingForm, handleMergePendingForm } = useAuth();
   const [columns, setColumns] = useState([]);
   const [selectedForm, setSelectedForm] = useState(null);
   const [newComment, setNewComment] = useState('');
@@ -45,6 +45,11 @@ const Dashboard = ({
   const handleMergeWithPending = async (selectedOption) => {
     const newforms = await handleMergePendingForm(selectedForm.id, selectedOption.value)
     setSelectedForm(prev => newforms.find(item => item.id === prev.id))
+  }
+
+  const handleUnMergeWithPending = async () => {
+    await handleUnmergePendingForm(selectedForm.id);
+    setSelectedForm(prev => ({...prev, connectedPendingForm: null}))
   }
 
   const handleAddPendingForm = async () => {
@@ -316,6 +321,12 @@ const Dashboard = ({
                         <div className="pending-form-event">{selectedForm.connectedPendingForm.eventDescription}</div>
                         <div className="pending-form-time">{formatDateTime(selectedForm.connectedPendingForm.createdAt)}</div>
                       </div>
+                      <button
+                    className="delete-btn"
+                    onClick={() => handleUnMergeWithPending()}
+                  >
+                    ×
+                  </button>
                     </div>
                     : <div className='pending-form-selection'>
                       <Select onChange={handleMergeWithPending} options={pendingForms.map(pendingForm => ({
