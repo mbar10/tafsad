@@ -7,7 +7,7 @@ import { useExportToCsv } from '../../hooks/useExportToCsv';
 import { PendingFormsEditor } from '../pendingFormEditor/PendingFormEditor';
 import { formatDateTime, truncateText } from '../../utils/transform';
 import { Comments } from '../comments/Comments';
-import { FormFilterPopup } from '../FormFilterPopup/FormFilterPopup';
+import { FormFilterPopup } from '../FormFilterPopup/FormFilterPopup'; 
 
 const Dashboard = ({
   onLogout,
@@ -20,11 +20,25 @@ const Dashboard = ({
   const [filters, setFilters] = useState([]);
   const {exportToCSV} = useExportToCsv(forms, columns);
 
-  function getFilteredForms(forms) {
-    return forms.filter(form =>
-      filters.every(filter => form[filter.key] === filter.value)
-    )
-  }
+  const getFilteredForms = (forms) => {
+    return forms.filter((form) => {
+      return filters.every((filter) => {
+        if (!filter.value) return true;
+  
+        if (filter.key === "timeFrom") {
+          return new Date(form.date) >= new Date(filter.value);
+        }
+  
+        if (filter.key === "timeTo") {
+          return new Date(form.date) <= new Date(filter.value);
+        }
+  
+        const formValue = form[filter.key] || "";
+        return formValue.toLowerCase().includes(filter.value.toLowerCase());
+      });
+    });
+  };
+  
 
   const filter = () => {
     const filteredForms = getFilteredForms(forms);

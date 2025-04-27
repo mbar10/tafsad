@@ -92,4 +92,44 @@
   .apply-button:hover {
     background-color: #1d4ed8;
   }
+
+  @keyframes breath {
+    0%, 100% {
+      transform: scale(0.9);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+  }
+
+  .active-filter{
+    background-color:#4caf50;
+    animation: breath 3s infinite ease-in-out;
+  }
+
+
+  .calander {
+    width: 500px;
+  }
+  
+  .preset-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    width: 100%;
+    overflow-x: scroll;
+  }
+  
+  .preset-buttons button {
+    background-color: #787878;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  
+  .preset-buttons button:hover {
+    background-color: #a9a9a9;
+  }
   
