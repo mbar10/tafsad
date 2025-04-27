@@ -438,39 +438,6 @@
   }
 }
 
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #2c3e50;
-}
-
-.form-group input,
-.form-group textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  transition: all 0.3s ease;
-}
-
-.form-group textarea {
-  min-height: 100px;
-  resize: vertical;
-}
-
-.form-group input:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-}
-
 .pending-column {
   background-color: #f1f8e9;
   border: 2px dashed #81c784;
@@ -484,58 +451,6 @@
   padding: 1rem;
   height: 100%;
   overflow-y: scroll;
-}
-
-.add-pending-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  background-color: white;
-  padding: 1rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.add-pending-form .form-group {
-  margin-bottom: 0.5rem;
-}
-
-.add-pending-form input,
-.add-pending-form textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #81c784;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  transition: all 0.3s ease;
-}
-
-.add-pending-form textarea {
-  min-height: 80px;
-  resize: vertical;
-}
-
-.add-pending-form input:focus,
-.add-pending-form textarea:focus {
-  outline: none;
-  border-color: #4caf50;
-  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
-}
-
-.add-pending-form button {
-  padding: 0.75rem;
-  background-color: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.3s ease;
-}
-
-.add-pending-form button:hover {
-  background-color: #388e3c;
 }
 
 .pending-form-card {

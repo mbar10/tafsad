@@ -14,6 +14,10 @@ const COLUMNS = [{
   title: "חדשים"
 },
 {
+  id: "MergedWithPending",
+  title: 'צומד ל-"מתין להגשה"'
+},
+{
   id: "punishmentComing",
   title: "עונש בהורדה"
 },

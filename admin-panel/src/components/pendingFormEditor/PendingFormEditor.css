@@ -1,0 +1,82 @@
+.pending-form-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    background-color: white;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .pending-form-editor .form-group {
+    margin-bottom: 0.5rem;
+  }
+  
+  .pending-form-editor input,
+  .pending-form-editor textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #81c784;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+  }
+  
+  .pending-form-editor textarea {
+    min-height: 80px;
+    resize: vertical;
+  }
+  
+  .pending-form-editor input:focus,
+  .pending-form-editor textarea:focus {
+    outline: none;
+    border-color: #4caf50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+  }
+  
+  .pending-form-editor button {
+    padding: 0.75rem;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.3s ease;
+  }
+  
+  .pending-form-editor button:hover {
+    background-color: #388e3c;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #2c3e50;
+  }
+  
+  input, textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+  }
+  
+  textarea {
+    min-height: 100px;
+    resize: vertical;
+  }
+  
+  input:focus, textarea:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+  }

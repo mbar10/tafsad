@@ -7,6 +7,7 @@ const AuthContext = createContext(undefined);
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [forms, setForms] = useState([]);
+  const [columns, setColumns] = useState([]);
   const [pendingForms, setPendingForms] = useState([])
   const [loginError, setLoginError] = useState('');
   const navigate = useNavigate();
@@ -17,8 +18,55 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       fetchForms(token);
       fetchPendingForms()
+      fetchColumns()
     }
   }, []);
+
+  const handleAddComment = async (selectedFormId, comment) => {
+    try {
+      const { serverUrl } = getConfig();
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${serverUrl}/api/forms/${selectedFormId}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ text: comment })
+      });
+
+      if (response.ok) {
+        const comment = await response.json();
+        setForms(prevForms =>
+          prevForms.map(form =>
+            form.id === selectedFormId ? { ...form, 
+              comments: [...form.comments || [], comment] } : form
+          )
+        )
+        return comment
+      }
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    }
+  };
+
+  const fetchColumns = async () => {
+    try {
+      const { serverUrl } = getConfig();
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${serverUrl}/api/columns`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setColumns(data);
+      }
+    } catch (error) {
+      console.error('Error fetching columns:', error);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
@@ -135,21 +183,40 @@ export const AuthProvider = ({ children }) => {
   };
 
   const AddPendingForm = async (newPendingForm) => {
-      const token = localStorage.getItem('adminToken');
+    const token = localStorage.getItem('adminToken');
+    const { serverUrl } = getConfig();
+    const response = await fetch(`${serverUrl}/api/pending-forms`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(newPendingForm)
+    });
+
+    if (response.ok) {
+      const newForm = await response.json();
+      setPendingForms(prev => [...prev, newForm]);
+    }
+  };
+
+  const handleFormDelete = async (formId) => {
+    try {
       const { serverUrl } = getConfig();
-      const response = await fetch(`${serverUrl}/api/pending-forms`, {
-        method: 'POST',
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${serverUrl}/api/forms/${formId}`, {
+        method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(newPendingForm)
+        }
       });
 
       if (response.ok) {
-        const newForm = await response.json();
-        setPendingForms(prev => [...prev, newForm]);
+        setForms(prevForms => prevForms.filter(form => form.id !== formId));
       }
+    } catch (error) {
+      console.error('Error deleting form:', error);
+    }
   };
 
   const handleDeletePendingForm = async (id) => {
@@ -288,13 +355,15 @@ export const AuthProvider = ({ children }) => {
       }
       if (response.ok) {
         const newForms = forms.map(form =>
-          form.id === formId ? { ...form,
-            connectedPendingForm: pendingForms.find(item => item.id === pendingFormId) } : form
+          form.id === formId ? {
+            ...form,
+            connectedPendingForm: pendingForms.find(item => item.id === pendingFormId)
+          } : form
         )
         setForms(newForms);
         setPendingForms(prevForms => prevForms.filter(item => item.id !== pendingFormId))
         return newForms
-      }else{
+      } else {
         console.error("failed merging with pending form", response)
       }
     } catch (error) {
@@ -310,7 +379,7 @@ export const AuthProvider = ({ children }) => {
         handleLogout();
         return;
       }
-  
+
       const response = await fetch(`${serverUrl}/api/unmerge/form/${formId}`, {
         method: 'PATCH',
         headers: {
@@ -318,24 +387,24 @@ export const AuthProvider = ({ children }) => {
           'Authorization': `Bearer ${token}`
         }
       });
-  
+
       if (response.status === 401) {
         handleLogout();
         return;
       }
-  
+
       if (response.ok) {
         const data = await response.json();
         const newPendingForm = data.pendingForm;
-  
+
         // Remove the connectedPendingForm from the form
         const updatedForms = forms.map(form =>
           form.id === formId ? { ...form, connectedPendingForm: null } : form
         );
-  
+
         setForms(updatedForms);
         setPendingForms(prev => [...prev, newPendingForm]); // add it back to the list
-  
+
         return newPendingForm;
       } else {
         console.error("Failed unmerging pending form", response);
@@ -344,13 +413,14 @@ export const AuthProvider = ({ children }) => {
       console.error("Error unmerging pending form:", error);
     }
   };
-  
+
 
   return (
     <AuthContext.Provider
       value={{
         isAuthenticated,
         forms,
+        columns,
         setForms,
         pendingForms,
         loginError,
@@ -362,7 +432,9 @@ export const AuthProvider = ({ children }) => {
         AddPendingForm,
         handleDeletePendingForm,
         handleMergePendingForm,
-        handleUnmergePendingForm 
+        handleFormDelete,
+        handleUnmergePendingForm,
+        handleAddComment
       }}
     >
       {children}

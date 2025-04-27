@@ -4,43 +4,49 @@ import Select from "react-select"
 import { useAuth } from '../../contexts/AuthContext';
 import './Dashboard.css';
 import { getConfig } from '../../config';
+import { useExportToCsv } from '../../hooks/useExportToCsv';
+import { PendingFormsEditor } from '../pendingFormEditor/PendingFormEditor';
+import { formatDateTime, truncateText } from '../../utils/transform';
+import { Comments } from '../comments/Comments';
 
 const Dashboard = ({
   onLogout,
   onUpdateColumn,
   onUpdatePunishment,
 }) => {
-  const { forms, setForms, pendingForms, AddPendingForm, handleUnmergePendingForm, handleDeletePendingForm, handleMergePendingForm } = useAuth();
-  const [columns, setColumns] = useState([]);
+  const { forms, columns, pendingForms, handleFormDelete, handleAddComment, handleUnmergePendingForm, handleDeletePendingForm, handleMergePendingForm } = useAuth();
   const [selectedForm, setSelectedForm] = useState(null);
   const [newComment, setNewComment] = useState('');
-  const [newPendingForm, setNewPendingForm] = useState({
-    name: '',
-    commander: '',
-    eventDescription: ''
-  });
+  const [displayedForms, setDisplayedForms] = useState(forms);
+  const [filters, setFilters] = useState([]);
+  const [sortData, setSortData] = useState({});
+  const {exportToCSV} = useExportToCsv(forms);
+
+  function getSortedForms(
+    forms, key, ascending = true
+  ) {
+    return forms.sort((a, b) => {
+      const valueA = a[key];
+      const valueB = b[key];
+
+      if (valueA < valueB) return ascending ? -1 : 1;
+      if (valueA > valueB) return ascending ? 1 : -1;
+      return 0;
+    });
+  }
+
+  function getFilteredForms(forms) {
+    return forms.filter(form =>
+      filters.every(filter => form[filter.key] === filter.value)
+    )
+  }
 
   useEffect(() => {
-    const fetchColumns = async () => {
-      try {
-        const { serverUrl } = getConfig();
-        const token = localStorage.getItem('adminToken');
-        const response = await fetch(`${serverUrl}/api/columns`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setColumns(data);
-        }
-      } catch (error) {
-        console.error('Error fetching columns:', error);
-      }
-    };
-
-    fetchColumns();
-  }, []);
+    const currentForms = forms;
+    const filteredForms = getFilteredForms(currentForms);
+    const filteredAndSortedForms = getSortedForms(filteredForms);
+    setDisplayedForms(filteredAndSortedForms)
+  }, [forms])
 
   const handleMergeWithPending = async (selectedOption) => {
     const newforms = await handleMergePendingForm(selectedForm.id, selectedOption.value)
@@ -49,19 +55,7 @@ const Dashboard = ({
 
   const handleUnMergeWithPending = async () => {
     await handleUnmergePendingForm(selectedForm.id);
-    setSelectedForm(prev => ({...prev, connectedPendingForm: null}))
-  }
-
-  const handleAddPendingForm = async () => {
-    if (!newPendingForm.name.trim()
-      || !newPendingForm.commander.trim()
-      || !newPendingForm.eventDescription.trim()) return;
-    try {
-      await AddPendingForm(newPendingForm);
-      setNewPendingForm({ name: '', eventDescription: '', commander: '' });
-    } catch (error) {
-      console.error('Error adding pending form:', error);
-    }
+    setSelectedForm(prev => ({ ...prev, connectedPendingForm: null }))
   }
 
   const handleDragEnd = async (result) => {
@@ -71,96 +65,19 @@ const Dashboard = ({
     await onUpdateColumn(draggableId, destination.droppableId);
   };
 
-  const formatDateTime = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('he-IL', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const truncateText = (text, wordLimit) => {
-    const words = text.split(' ');
-    if (words.length > wordLimit) {
-      return words.slice(0, wordLimit).join(' ') + '...';
-    }
-    return text;
-  };
-
-  const exportToCSV = () => {
-    const headers = ['שם', 'מפקד', 'תיאור אירוע', 'תאריך', 'עמודה', 'עונש'];
-    const csvContent = [
-      headers.join(','),
-      ...forms.map(form => [
-        form.name,
-        form.commander,
-        form.eventDescription,
-        formatDateTime(form.date),
-        columns.find(col => col.id === form.columnId)?.title || '',
-        form.punishment || ''
-      ].map(field => `"${field}"`).join(','))
-    ].join('\n');
-
-    // Add BOM for Hebrew characters
-    const BOM = '\uFEFF';
-    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'forms.csv';
-    link.click();
-  };
-
-  const handleAddComment = async () => {
-    if (!selectedForm || !newComment.trim()) return;
-
-    try {
-      const { serverUrl } = getConfig();
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${serverUrl}/api/forms/${selectedForm.id}/comments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ text: newComment })
-      });
-
-      if (response.ok) {
-        const comment = await response.json();
-        setSelectedForm(prev => ({
-          ...prev,
-          comments: [...(prev.comments || []), comment]
-        }));
-        setNewComment('');
-      }
-    } catch (error) {
-      console.error('Error adding comment:', error);
-    }
-  };
-
   const handleDeleteForm = async (formId) => {
-    try {
-      const { serverUrl } = getConfig();
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${serverUrl}/api/forms/${formId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        // Update the forms state by filtering out the deleted form
-        setForms(prevForms => prevForms.filter(form => form.id !== formId));
-        setSelectedForm(null);
-      }
-    } catch (error) {
-      console.error('Error deleting form:', error);
-    }
+      await handleFormDelete(formId)
+      setSelectedForm(null);
   };
+
+  const createNewComment = async (comment) => {
+    await handleAddComment(selectedForm.id, comment);
+    setSelectedForm(prev => ({
+      ...prev,
+      comments: [...(prev.comments || []), {text: comment, createdAt: Date.now()}]
+    }));
+    
+  }
 
   return (
     <div className="dashboard">
@@ -177,36 +94,7 @@ const Dashboard = ({
           <div className="kanban-column pending-column">
             <h2 className="column-title">ממתין להגשה</h2>
             <div className="pending-forms-list">
-              <div className="add-pending-form">
-                <div className="form-group">
-                  <input
-                    type="text"
-                    value={newPendingForm.name}
-                    onChange={(e) => setNewPendingForm(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="שם חניך..."
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddPendingForm()}
-                  />
-                </div>
-                <div className="form-group">
-                  <input
-                    type="text"
-                    value={newPendingForm.commander}
-                    onChange={(e) => setNewPendingForm(prev => ({ ...prev, commander: e.target.value }))}
-                    placeholder="שם מפקד..."
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddPendingForm()}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <textarea
-                    value={newPendingForm.eventDescription}
-                    onChange={(e) => setNewPendingForm(prev => ({ ...prev, eventDescription: e.target.value }))}
-                    placeholder="תיאור האירוע..."
-                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleAddPendingForm())}
-                  />
-                </div>
-                <button onClick={handleAddPendingForm}>הוסף</button>
-              </div>
+              <PendingFormsEditor/>
               {pendingForms.map(form => (
                 <div key={form.id} className="pending-form-card">
                   <div className="pending-form-content">
@@ -322,11 +210,11 @@ const Dashboard = ({
                         <div className="pending-form-time">{formatDateTime(selectedForm.connectedPendingForm.createdAt)}</div>
                       </div>
                       <button
-                    className="delete-btn"
-                    onClick={() => handleUnMergeWithPending()}
-                  >
-                    ×
-                  </button>
+                        className="delete-btn"
+                        onClick={() => handleUnMergeWithPending()}
+                      >
+                        ×
+                      </button>
                     </div>
                     : <div className='pending-form-selection'>
                       <Select onChange={handleMergeWithPending} options={pendingForms.map(pendingForm => ({
@@ -347,29 +235,9 @@ const Dashboard = ({
                     </div>
                 }
               </div>
-              <div className="comments-section">
-                <h3>הערות</h3>
-                {selectedForm.comments && selectedForm.comments.length > 0 && (
-                  <div className="comments-list">
-                    {selectedForm.comments.map((comment) => (
-                      <div key={comment.id} className="comment">
-                        <p>{comment.text}</p>
-                        <small>{formatDateTime(comment.createdAt)}</small>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="add-comment">
-                  <textarea
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="הוסף הערה חדשה..."
-                  />
-                  <button onClick={handleAddComment}>הוסף הערה</button>
-                </div>
-              </div>
+              <Comments comments={selectedForm.comments} createNewComment={createNewComment}/>
               <div className="delete-form-section">
-                <button 
+                <button
                   className="delete-form-btn"
                   onClick={() => {
                     handleDeleteForm(selectedForm.id);
