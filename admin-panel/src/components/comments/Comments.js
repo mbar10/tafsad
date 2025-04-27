@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { formatDateTime } from "../../utils/transform";
+import "./Comments.css"
 
 export const Comments = ({comments, createNewComment}) => {
     const [newComment, setNewComment] = useState();

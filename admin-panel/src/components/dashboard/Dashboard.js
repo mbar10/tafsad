@@ -3,11 +3,11 @@ import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import Select from "react-select"
 import { useAuth } from '../../contexts/AuthContext';
 import './Dashboard.css';
-import { getConfig } from '../../config';
 import { useExportToCsv } from '../../hooks/useExportToCsv';
 import { PendingFormsEditor } from '../pendingFormEditor/PendingFormEditor';
 import { formatDateTime, truncateText } from '../../utils/transform';
 import { Comments } from '../comments/Comments';
+import { FormFilterPopup } from '../filter/FormFilterPopup';
 
 const Dashboard = ({
   onLogout,
@@ -16,11 +16,10 @@ const Dashboard = ({
 }) => {
   const { forms, columns, pendingForms, handleFormDelete, handleAddComment, handleUnmergePendingForm, handleDeletePendingForm, handleMergePendingForm } = useAuth();
   const [selectedForm, setSelectedForm] = useState(null);
-  const [newComment, setNewComment] = useState('');
   const [displayedForms, setDisplayedForms] = useState(forms);
   const [filters, setFilters] = useState([]);
   const [sortData, setSortData] = useState({});
-  const {exportToCSV} = useExportToCsv(forms);
+  const {exportToCSV} = useExportToCsv(forms, columns);
 
   function getSortedForms(
     forms, key, ascending = true
@@ -41,12 +40,16 @@ const Dashboard = ({
     )
   }
 
-  useEffect(() => {
+  const sortAndFilter = () => {
     const currentForms = forms;
     const filteredForms = getFilteredForms(currentForms);
     const filteredAndSortedForms = getSortedForms(filteredForms);
     setDisplayedForms(filteredAndSortedForms)
-  }, [forms])
+  }
+
+  useEffect(() => {
+    sortAndFilter()
+  }, [forms, filters, sortData, sortAndFilter])
 
   const handleMergeWithPending = async (selectedOption) => {
     const newforms = await handleMergePendingForm(selectedForm.id, selectedOption.value)
@@ -84,9 +87,11 @@ const Dashboard = ({
       <div className="dashboard-header">
         <h1>לוח בקרה</h1>
         <div className="dashboard-actions">
-          <button className="export-btn" onClick={exportToCSV}>ייצוא ל-CSV</button>
-          <button className="logout-btn" onClick={onLogout}>התנתק</button>
+        <FormFilterPopup filters={filters} setFilters={setFilters}/>
+          <button className="header-button" onClick={exportToCSV}>ייצוא ל-CSV</button>
+          <button className="header-button" onClick={onLogout}>התנתק</button>
         </div>
+
       </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>
@@ -123,7 +128,7 @@ const Dashboard = ({
                     ref={provided.innerRef}
                     {...provided.droppableProps}
                   >
-                    {forms
+                    {displayedForms
                       .filter(form => form.columnId === column.id)
                       .map((form, index) => (
                         <Draggable key={form.id} draggableId={form.id} index={index}>
