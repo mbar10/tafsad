@@ -7,7 +7,7 @@ import { useExportToCsv } from '../../hooks/useExportToCsv';
 import { PendingFormsEditor } from '../pendingFormEditor/PendingFormEditor';
 import { formatDateTime, truncateText } from '../../utils/transform';
 import { Comments } from '../comments/Comments';
-import { FormFilterPopup } from '../filter/FormFilterPopup';
+import { FormFilterPopup } from '../FormFilterPopup/FormFilterPopup';
 
 const Dashboard = ({
   onLogout,
@@ -18,21 +18,7 @@ const Dashboard = ({
   const [selectedForm, setSelectedForm] = useState(null);
   const [displayedForms, setDisplayedForms] = useState(forms);
   const [filters, setFilters] = useState([]);
-  const [sortData, setSortData] = useState({});
   const {exportToCSV} = useExportToCsv(forms, columns);
-
-  function getSortedForms(
-    forms, key, ascending = true
-  ) {
-    return forms.sort((a, b) => {
-      const valueA = a[key];
-      const valueB = b[key];
-
-      if (valueA < valueB) return ascending ? -1 : 1;
-      if (valueA > valueB) return ascending ? 1 : -1;
-      return 0;
-    });
-  }
 
   function getFilteredForms(forms) {
     return forms.filter(form =>
@@ -40,16 +26,14 @@ const Dashboard = ({
     )
   }
 
-  const sortAndFilter = () => {
-    const currentForms = forms;
-    const filteredForms = getFilteredForms(currentForms);
-    const filteredAndSortedForms = getSortedForms(filteredForms);
-    setDisplayedForms(filteredAndSortedForms)
+  const filter = () => {
+    const filteredForms = getFilteredForms(forms);
+    setDisplayedForms(filteredForms)
   }
 
   useEffect(() => {
-    sortAndFilter()
-  }, [forms, filters, sortData, sortAndFilter])
+    filter()
+  }, [forms, filters, filter])
 
   const handleMergeWithPending = async (selectedOption) => {
     const newforms = await handleMergePendingForm(selectedForm.id, selectedOption.value)
