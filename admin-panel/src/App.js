@@ -11,7 +11,7 @@ const PrivateRoute = ({ children }) => {
 };
 
 const AppContent = () => {
-  const { isAuthenticated, handleLogout, handleSort, handleUpdateColumn, handleUpdatePunishment } = useAuth();
+  const { isAuthenticated, handleLogout } = useAuth();
 
   return (
     <div className="app">
@@ -23,9 +23,6 @@ const AppContent = () => {
           <PrivateRoute>
             <Dashboard
               onLogout={handleLogout}
-              onSort={handleSort}
-              onUpdateColumn={handleUpdateColumn}
-              onUpdatePunishment={handleUpdatePunishment}
             />
           </PrivateRoute>
         } />

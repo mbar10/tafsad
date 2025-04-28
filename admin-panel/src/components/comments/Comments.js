@@ -4,7 +4,6 @@ import "./Comments.css"
 
 export const Comments = ({comments, createNewComment}) => {
     const [newComment, setNewComment] = useState();
-    console.log(comments)
 
     const handleCreateNewComment = async () => {
         await createNewComment(newComment);

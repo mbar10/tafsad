@@ -1,83 +1,98 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-import Select from "react-select"
 import { useAuth } from '../../contexts/AuthContext';
 import './Dashboard.css';
 import { useExportToCsv } from '../../hooks/useExportToCsv';
 import { PendingFormsEditor } from '../pendingFormEditor/PendingFormEditor';
 import { formatDateTime, truncateText } from '../../utils/transform';
-import { Comments } from '../comments/Comments';
-import { FormFilterPopup } from '../FormFilterPopup/FormFilterPopup'; 
+import { FormFilterPopup } from '../FormFilterPopup/FormFilterPopup';
+import { Form } from '../form/Form';
 
 const Dashboard = ({
   onLogout,
-  onUpdateColumn,
-  onUpdatePunishment,
 }) => {
-  const { forms, columns, pendingForms, handleFormDelete, handleAddComment, handleUnmergePendingForm, handleDeletePendingForm, handleMergePendingForm } = useAuth();
+  const {
+    forms,
+    columns,
+    pendingForms,
+    handleFormDelete,
+    handleAddComment,
+    handleUnmergePendingForm,
+    handleDeletePendingForm,
+    handleMergePendingForm,
+    handleUpdateColumn,
+    handleUpdatePunishment
+  } = useAuth();
   const [selectedForm, setSelectedForm] = useState(null);
-  const [displayedForms, setDisplayedForms] = useState(forms);
   const [filters, setFilters] = useState([]);
-  const {exportToCSV} = useExportToCsv(forms, columns);
+  const [isAscending, setIsAscending] = useState();
+  const { exportToCSV } = useExportToCsv(forms, columns);
 
-  const getFilteredForms = (forms) => {
-    return forms.filter((form) => {
+  const displayedForms = useMemo(() => {
+    const filteredForms = forms.filter((form) => {
       return filters.every((filter) => {
         if (!filter.value) return true;
-  
+
         if (filter.key === "timeFrom") {
           return new Date(form.date) >= new Date(filter.value);
         }
-  
+
         if (filter.key === "timeTo") {
           return new Date(form.date) <= new Date(filter.value);
         }
-  
+
         const formValue = form[filter.key] || "";
         return formValue.toLowerCase().includes(filter.value.toLowerCase());
       });
     });
-  };
-  
+    return filteredForms.sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      return isAscending ? dateA - dateB : dateB - dateA;
+    });
+  }, [forms, filters, isAscending]);
 
-  const filter = () => {
-    const filteredForms = getFilteredForms(forms);
-    setDisplayedForms(filteredForms)
+  const onUpdatePunishment = (id, punishment) => {
+    handleUpdatePunishment(id, punishment);
+    if (selectedForm.columnId === columns[1].id) {
+      handleUpdateColumn(selectedForm.id, columns[2].id);
+    }
   }
-
-  useEffect(() => {
-    filter()
-  }, [forms, filters, filter])
 
   const handleMergeWithPending = async (selectedOption) => {
     const newforms = await handleMergePendingForm(selectedForm.id, selectedOption.value)
+    if (selectedForm.columnId === columns[0].id) {
+      handleUpdateColumn(selectedForm.id, columns[1].id);
+    }
     setSelectedForm(prev => newforms.find(item => item.id === prev.id))
   }
 
   const handleUnMergeWithPending = async () => {
     await handleUnmergePendingForm(selectedForm.id);
+    if (selectedForm.columnId === columns[1].id) {
+      handleUpdateColumn(selectedForm.id, columns[0].id);
+    }
     setSelectedForm(prev => ({ ...prev, connectedPendingForm: null }))
   }
 
   const handleDragEnd = async (result) => {
     if (!result.destination) return;
-
     const { draggableId, destination } = result;
-    await onUpdateColumn(draggableId, destination.droppableId);
+    await handleUpdateColumn(draggableId, destination.droppableId);
   };
 
   const handleDeleteForm = async (formId) => {
-      await handleFormDelete(formId)
-      setSelectedForm(null);
+    await handleFormDelete(formId)
+    setSelectedForm(null);
   };
 
   const createNewComment = async (comment) => {
     await handleAddComment(selectedForm.id, comment);
     setSelectedForm(prev => ({
       ...prev,
-      comments: [...(prev.comments || []), {text: comment, createdAt: Date.now()}]
+      comments: [...(prev.comments || []), { text: comment, createdAt: Date.now() }]
     }));
-    
+
   }
 
   return (
@@ -85,7 +100,9 @@ const Dashboard = ({
       <div className="dashboard-header">
         <h1>לוח בקרה</h1>
         <div className="dashboard-actions">
-        <FormFilterPopup filters={filters} setFilters={setFilters}/>
+          <FormFilterPopup filters={filters} setFilters={setFilters} />
+          <button className="header-button" onClick={() => setIsAscending(prev => !prev)}>
+            {isAscending ? "ישן למעלה" : "חדש למעלה"}</button>
           <button className="header-button" onClick={exportToCSV}>ייצוא ל-CSV</button>
           <button className="header-button" onClick={onLogout}>התנתק</button>
         </div>
@@ -97,7 +114,7 @@ const Dashboard = ({
           <div className="kanban-column pending-column">
             <h2 className="column-title">ממתין להגשה</h2>
             <div className="pending-forms-list">
-              <PendingFormsEditor/>
+              <PendingFormsEditor />
               {pendingForms.map(form => (
                 <div key={form.id} className="pending-form-card">
                   <div className="pending-form-content">
@@ -145,7 +162,7 @@ const Dashboard = ({
                                 <p className="form-date">תאריך האירוע: {formatDateTime(form.requestDateTime)}</p>
                                 <p className="form-date">תאריך הדיווח: {formatDateTime(form.date)}</p>
                                 {form.punishment && (
-                                  <p className="punishment-preview">{form.punishment}</p>
+                                  <p className="punishment-preview">{truncateText(form.punishment, 7)}</p>
                                 )}
                                 {form.comments && form.comments.length > 0 && (
                                   <div className="comment-count">{form.comments.length}</div>
@@ -169,89 +186,16 @@ const Dashboard = ({
           onUpdatePunishment(selectedForm.id, selectedForm.punishment);
           setSelectedForm(null);
         }}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => {
-              onUpdatePunishment(selectedForm.id, selectedForm.punishment);
-              setSelectedForm(null);
-            }}>×</button>
-            <div className="modal-header">
-              <h2>פרטי טופס</h2>
-            </div>
-            <div className="form-details">
-              <p><strong>שם מלא:</strong> {selectedForm.name}</p>
-              <p><strong>תיאור אירוע:</strong> {selectedForm.occurrence}</p>
-              <p><strong>תאריך:</strong> {formatDateTime(selectedForm.date)}</p>
-              <p><strong>מתי התבקשת להגיש טופס דיווח:</strong> {formatDateTime(selectedForm.requestDateTime)}</p>
-              <p><strong>עמודה:</strong> {columns.find(col => col.id === selectedForm.columnId)?.title}</p>
-              <p><strong>הנזק/ פוטנציאל הנזק:</strong> {selectedForm.damage}</p>
-              <p><strong>איך ניתן להמנע מהמקרה להבא:</strong> {selectedForm.prevention}</p>
-              <p><strong>מפקד:</strong> {selectedForm.commander}</p>
-              <div className="punishment-section">
-                <h3>עונש</h3>
-                <textarea
-                  value={selectedForm.punishment || ''}
-                  onChange={(e) => {
-                    const newValue = e.target.value;
-                    setSelectedForm(prev => ({
-                      ...prev,
-                      punishment: newValue
-                    }));
-                  }}
-                  placeholder="הכנס עונש..."
-                  className="form-textarea"
-                />
-              </div>
-              <div className='pending-form-connection-section'>
-                <h3>התאמה ל"ממתין להגשה"</h3>
-                {
-                  selectedForm.connectedPendingForm
-                    ? <div key={selectedForm.connectedPendingForm.id} className="pending-form-card">
-                      <div className="pending-form-content">
-                        <div className="pending-form-name">{selectedForm.connectedPendingForm.name}</div>
-                        <div className="pending-form-commander">{selectedForm.connectedPendingForm.commander}</div>
-                        <div className="pending-form-event">{selectedForm.connectedPendingForm.eventDescription}</div>
-                        <div className="pending-form-time">{formatDateTime(selectedForm.connectedPendingForm.createdAt)}</div>
-                      </div>
-                      <button
-                        className="delete-btn"
-                        onClick={() => handleUnMergeWithPending()}
-                      >
-                        ×
-                      </button>
-                    </div>
-                    : <div className='pending-form-selection'>
-                      <Select onChange={handleMergeWithPending} options={pendingForms.map(pendingForm => ({
-                        value: pendingForm.id,
-                        label: (
-                          <div key={pendingForm.id} className="pending-form-card">
-                            <div className="pending-form-content">
-                              <div className="pending-form-name">{pendingForm.name}</div>
-                              <div className="pending-form-commander">{pendingForm.commander}</div>
-                              <div className="pending-form-event">{pendingForm.eventDescription}</div>
-                              <div className="pending-form-time">{formatDateTime(pendingForm.createdAt)}</div>
-                            </div>
-                          </div>
-                        )
-                      })
-                      )}
-                        formatOptionLabel={(option) => option.label} />
-                    </div>
-                }
-              </div>
-              <Comments comments={selectedForm.comments} createNewComment={createNewComment}/>
-              <div className="delete-form-section">
-                <button
-                  className="delete-form-btn"
-                  onClick={() => {
-                    handleDeleteForm(selectedForm.id);
-                    setSelectedForm(null);
-                  }}
-                >
-                  מחק טופס
-                </button>
-              </div>
-            </div>
-          </div>
+          <Form
+            selectedForm={selectedForm}
+            setSelectedForm={setSelectedForm}
+            onUpdatePunishment={onUpdatePunishment}
+            pendingForms={pendingForms}
+            handleMergeWithPending={handleMergeWithPending}
+            handleUnMergeWithPending={handleUnMergeWithPending}
+            createNewComment={createNewComment}
+            handleDeleteForm={handleDeleteForm}
+          />
         </div>
       )}
     </div>

@@ -150,27 +150,6 @@
   text-align: right;
 }
 
-.form-card .punishment-section {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #e9ecef;
-}
-
-.form-card .punishment-section h3 {
-  margin: 0 0 1rem 0;
-  color: #2c3e50;
-}
-
-.form-card .punishment-section textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  margin-bottom: 0.5rem;
-  font-family: inherit;
-  resize: vertical;
-}
-
 /* Modal styles */
 .modal-overlay {
   position: fixed;
@@ -183,32 +162,6 @@
   justify-content: center;
   align-items: center;
   z-index: 1000;
-}
-
-.modal-close {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #7f8c8d;
-  padding: 0.5rem;
-  line-height: 1;
-  z-index: 1001;
-  width: 2rem;
-  height: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.3s ease;
-}
-
-.modal-close:hover {
-  background-color: #f8f9fa;
-  color: #2c3e50;
 }
 
 .modal-content {
@@ -224,76 +177,12 @@
   margin-top: 2rem;
 }
 
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  padding-right: 2rem;
-  padding-top: 1rem;
-}
-
-.modal-header h2 {
-  margin: 0;
-  padding: 0;
-}
-
 .form-card .form-name {
   margin: 0.25rem 0;
   color: #7f8c8d;
   font-size: 0.9rem;
   text-align: right;
   font-weight: 500;
-}
-
-.form-textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  margin-bottom: 0.5rem;
-  font-family: inherit;
-  resize: vertical;
-  min-height: 100px;
-  line-height: 1.5;
-  transition: all 0.3s ease;
-  background-color: #f8f9fa;
-}
-
-.form-textarea:focus {
-  outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-  background-color: white;
-}
-
-.form-textarea::placeholder {
-  color: #95a5a6;
-}
-
-.punishment-section textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  margin-bottom: 0.5rem;
-  font-family: inherit;
-  resize: vertical;
-  min-height: 100px;
-  line-height: 1.5;
-  transition: all 0.3s ease;
-  background-color: #f8f9fa;
-}
-
-.punishment-section textarea:focus {
-  outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-  background-color: white;
-}
-
-.punishment-section textarea::placeholder {
-  color: #95a5a6;
 }
 
 .form-card .punishment-preview {
