@@ -581,7 +581,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-
   const handleUpdateGroupColumn = async (groupId, columnId) => {
     try {
       const { serverUrl } = getConfig();
@@ -634,7 +633,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-
   return (
     <AuthContext.Provider
       value={{
@@ -662,6 +660,7 @@ export const AuthProvider = ({ children }) => {
         addFormToGroup,
         removeFormFromGroup,
         formGroups,
+        setFormGroups,
         handleUpdateGroupColumn
       }}
     >

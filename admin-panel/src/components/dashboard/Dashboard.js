@@ -8,6 +8,7 @@ import { formatDateTime, truncateText } from '../../utils/transform';
 import { FormFilterPopup } from '../FormFilterPopup/FormFilterPopup';
 import { Form } from '../form/Form';
 import { GroupCreator } from '../groupCreator/GroupCreator';
+import { FormGroup } from '../FormGroup/FormGroup';
 
 const Dashboard = ({
   onLogout,
@@ -25,7 +26,8 @@ const Dashboard = ({
     handleUpdatePunishment,
     formGroups,
     handleUpdateGroupColumn,
-    addFormToGroup
+    addFormToGroup,
+    updateGroup,
   } = useAuth();
   const [selectedForm, setSelectedForm] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -35,7 +37,7 @@ const Dashboard = ({
   const { exportToCSV } = useExportToCsv(forms, columns);
 
   const displayedItems = useMemo(() => {
-    const groupedFormIds = formGroups.flatMap(g => g.formIds);
+    const groupedFormIds = formGroups.flatMap(g => g.forms);
     const filteredTaggedForms = forms.filter(form =>
       !groupedFormIds.includes(form.id) &&
       filters.every(filter => {
@@ -81,6 +83,13 @@ const Dashboard = ({
     }
   }
 
+  const onGroupUpdatePunishment = (id, punishment) => {
+    updateGroup(id, { punishment });
+    if (selectedGroup.columnId === columns[1].id && punishment) {
+      handleUpdateGroupColumn(selectedGroup.id, columns[2].id);
+    }
+  }
+
   const handleMergeWithPending = async (selectedOption) => {
     const newforms = await handleMergePendingForm(selectedForm.id, selectedOption.value)
     if (selectedForm.columnId === columns[0].id) {
@@ -109,9 +118,9 @@ const Dashboard = ({
         await addFormToGroup(groupId, draggableId);
       }
     } else {
-      if(formGroups.find(group => group.id === draggableId)){
+      if (formGroups.find(group => group.id === draggableId)) {
         await handleUpdateGroupColumn(draggableId, destination.droppableId)
-      }else{
+      } else {
         await handleUpdateColumn(draggableId, destination.droppableId);
       }
     }
@@ -227,7 +236,8 @@ const Dashboard = ({
                                 {...provided.dragHandleProps}
                                 onClick={() => selectItem(group, false)}
                               >
-                                <div style={{ marginTop: "2rem" }}>
+                                <div>
+                                  <h4>{group.title}</h4>
                                   <p className="event-description">אירוע: {truncateText(group.description, 15)}</p>
                                   <p className="form-date">תאריך: {formatDateTime(group.date)}</p>
                                 </div>
@@ -250,15 +260,19 @@ const Dashboard = ({
                                               {...provided.dragHandleProps}
                                               onClick={() => selectItem(form, true)}
                                             >
-                                              <div>{form.name}</div>
+                                              <div>{form.name}</div>                                              
                                             </div>
                                           )}
                                         </Draggable>
                                       ))}
                                       {dropProvided.placeholder}
+                                      
                                     </div>
                                   )}
                                 </Droppable>
+                                {group.punishment && (
+                                    <p className="punishment-preview">{truncateText(group.punishment, 7)}</p>
+                                )}
                               </div>
                             )}
                           </Draggable>
@@ -292,6 +306,20 @@ const Dashboard = ({
           />
         </div>
       )}
+      {
+        selectedGroup &&
+        <div className="modal-overlay" onClick={() => {
+          onGroupUpdatePunishment(selectedGroup.id, selectedGroup.punishment);
+          selectItem(null, false);
+        }}>
+          <FormGroup
+            selectedGroup={selectedGroup}
+            setSelectedGroup={setSelectedGroup}
+            onUpdatePunishment={onGroupUpdatePunishment}
+            selectItem={selectItem}
+          />
+        </div>
+      }
     </div>
   );
 };

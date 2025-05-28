@@ -1,0 +1,98 @@
+.modal-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    position: relative;
+    max-width: 600px;
+    margin: 40px auto;
+  }
+  
+  .modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #333;
+  }
+  
+  .modal-header h2 {
+    margin: 0;
+    font-size: 24px;
+    color: #222;
+    text-align: center;
+  }
+  
+  .form-details {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 20px;
+  }
+  
+  .original-form-section h3 {
+    margin: 0 0 8px;
+    font-size: 20px;
+    color: #444;
+  }
+  
+  .form-detail {
+    font-size: 16px;
+    color: #555;
+    margin-bottom: 4px;
+  }
+  
+  .form-detail-date {
+    font-size: 14px;
+    color: #999;
+  }
+  
+  .punishment-section h3 {
+    margin-bottom: 8px;
+    font-size: 18px;
+    color: #444;
+  }
+  
+  .form-textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    resize: vertical;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  
+  .delete-form-section {
+    text-align: center;
+    margin-top: 20px;
+  }
+  
+  .delete-form-btn {
+    background-color: #e63946;
+    color: #fff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  
+  .delete-form-btn:hover {
+    background-color: #d62839;
+  }
+
+  .remove-from-group{
+    background-color: #d62839;
+    position: absolute;
+    left: 5px;
+    bottom: 5px;
+    padding: 5px;
+    width: 30px;
+  }
+  
