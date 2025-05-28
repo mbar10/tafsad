@@ -7,6 +7,7 @@ import { PendingFormsEditor } from '../pendingFormEditor/PendingFormEditor';
 import { formatDateTime, truncateText } from '../../utils/transform';
 import { FormFilterPopup } from '../FormFilterPopup/FormFilterPopup';
 import { Form } from '../form/Form';
+import { GroupCreator } from '../groupCreator/GroupCreator';
 
 const Dashboard = ({
   onLogout,
@@ -21,40 +22,60 @@ const Dashboard = ({
     handleDeletePendingForm,
     handleMergePendingForm,
     handleUpdateColumn,
-    handleUpdatePunishment
+    handleUpdatePunishment,
+    formGroups,
+    handleUpdateGroupColumn
   } = useAuth();
   const [selectedForm, setSelectedForm] = useState(null);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [isPendingFormEditor, setIsPendingFormEditor] = useState(true);
   const [filters, setFilters] = useState([]);
   const [isAscending, setIsAscending] = useState();
   const { exportToCSV } = useExportToCsv(forms, columns);
 
-  const displayedForms = useMemo(() => {
-    const filteredForms = forms.filter((form) => {
-      return filters.every((filter) => {
+  const displayedItems = useMemo(() => {
+    const groupedFormIds = formGroups.flatMap(g => g.formIds);
+    const filteredTaggedForms = forms.filter(form =>
+      !groupedFormIds.includes(form.id) &&
+      filters.every(filter => {
         if (!filter.value) return true;
-
-        if (filter.key === "timeFrom") {
-          return new Date(form.date) >= new Date(filter.value);
-        }
-
-        if (filter.key === "timeTo") {
-          return new Date(form.date) <= new Date(filter.value);
-        }
-
+        if (filter.key === "timeFrom") return new Date(form.date) >= new Date(filter.value);
+        if (filter.key === "timeTo") return new Date(form.date) <= new Date(filter.value);
         const formValue = form[filter.key] || "";
         return formValue.toLowerCase().includes(filter.value.toLowerCase());
-      });
-    });
-    return filteredForms.sort((a, b) => {
+      })
+    ).map(form => ({ ...form, tag: "form" }));
+
+    const filteredTaggedGroups = formGroups.filter(group => {
+      filters.every(filter => {
+        if (!filter.value) return true;
+        if (filter.key === "timeFrom") return new Date(group.date) >= new Date(filter.value);
+        if (filter.key === "timeTo") return new Date(group.date) <= new Date(filter.value);
+        const formValue = group[filter.key] || "";
+        return formValue.toLowerCase().includes(filter.value.toLowerCase());
+      })
+    }).map(group => ({ ...group, tag: "group" }));
+
+    return [...filteredTaggedForms, filteredTaggedGroups].sort((a, b) => {
       const dateA = new Date(a.date);
       const dateB = new Date(b.date);
       return isAscending ? dateA - dateB : dateB - dateA;
-    });
-  }, [forms, filters, isAscending]);
+    })
+  })
+
+  const selectItem = (item, isForm) => {
+    if (isForm) {
+      setSelectedForm(item);
+      setSelectedGroup(null);
+    } else {
+      setSelectedGroup(item);
+      setSelectedForm(null);
+    }
+  }
 
   const onUpdatePunishment = (id, punishment) => {
     handleUpdatePunishment(id, punishment);
-    if (selectedForm.columnId === columns[1].id) {
+    if (selectedForm.columnId === columns[1].id && punishment) {
       handleUpdateColumn(selectedForm.id, columns[2].id);
     }
   }
@@ -64,7 +85,7 @@ const Dashboard = ({
     if (selectedForm.columnId === columns[0].id) {
       handleUpdateColumn(selectedForm.id, columns[1].id);
     }
-    setSelectedForm(prev => newforms.find(item => item.id === prev.id))
+    selectItem(prev => newforms.find(item => item.id === prev.id), true);
   }
 
   const handleUnMergeWithPending = async () => {
@@ -72,26 +93,32 @@ const Dashboard = ({
     if (selectedForm.columnId === columns[1].id) {
       handleUpdateColumn(selectedForm.id, columns[0].id);
     }
-    setSelectedForm(prev => ({ ...prev, connectedPendingForm: null }))
+    selectItem(prev => ({ ...prev, connectedPendingForm: null }), true)
   }
 
   const handleDragEnd = async (result) => {
     if (!result.destination) return;
     const { draggableId, destination } = result;
-    await handleUpdateColumn(draggableId, destination.droppableId);
-  };
+  
+    if (destination.droppableId.startsWith("group-")) {
+      const groupId = destination.droppableId.replace("group-", "");
+      await handleUpdateGroupColumn(draggableId, groupId);
+    } else {
+      await handleUpdateColumn(draggableId, destination.droppableId);
+    }
+  };  
 
   const handleDeleteForm = async (formId) => {
     await handleFormDelete(formId)
-    setSelectedForm(null);
+    selectItem(null, true);
   };
 
   const createNewComment = async (comment) => {
     await handleAddComment(selectedForm.id, comment);
-    setSelectedForm(prev => ({
+    selectItem(prev => ({
       ...prev,
       comments: [...(prev.comments || []), { text: comment, createdAt: Date.now() }]
-    }));
+    }), true);
 
   }
 
@@ -114,7 +141,14 @@ const Dashboard = ({
           <div className="kanban-column pending-column">
             <h2 className="column-title">ממתין להגשה</h2>
             <div className="pending-forms-list">
-              <PendingFormsEditor />
+              <button onClick={() => setIsPendingFormEditor(!isPendingFormEditor)}>
+                switch
+              </button>
+              {
+                isPendingFormEditor
+                ? <PendingFormsEditor />
+                : <GroupCreator/>
+              }
               {pendingForms.map(form => (
                 <div key={form.id} className="pending-form-card">
                   <div className="pending-form-content">
@@ -143,35 +177,86 @@ const Dashboard = ({
                     ref={provided.innerRef}
                     {...provided.droppableProps}
                   >
-                    {displayedForms
+                    {displayedItems
                       .filter(form => form.columnId === column.id)
-                      .map((form, index) => (
-                        <Draggable key={form.id} draggableId={form.id} index={index}>
-                          {(provided) => (
-                            <div
-                              className="form-card"
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              onClick={() => setSelectedForm(form)}
-                            >
-                              <div className="commander-tag">{form?.connectedPendingForm?.commander || form.commander}</div>
-                              <div className="hanich-tag">{form?.connectedPendingForm?.name || form.name}</div>
-                              <div style={{ marginTop: "2rem" }}>
-                                <p className="event-description">אירוע: {truncateText(form?.connectedPendingForm?.eventDescription || form.occurrence, 15)}</p>
-                                <p className="form-date">תאריך האירוע: {formatDateTime(form.requestDateTime)}</p>
-                                <p className="form-date">תאריך הדיווח: {formatDateTime(form.date)}</p>
-                                {form.punishment && (
-                                  <p className="punishment-preview">{truncateText(form.punishment, 7)}</p>
-                                )}
-                                {form.comments && form.comments.length > 0 && (
-                                  <div className="comment-count">{form.comments.length}</div>
-                                )}
+                      .map((item, index) => {
+                        if (item.tag === "form") {
+                          const form = item;
+                          return <Draggable key={form.id} draggableId={form.id} index={index}>
+                            {(provided) => (
+                              <div
+                                className="form-card"
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                onClick={() => selectItem(form, true)}
+                              >
+                                <div className="commander-tag">{form?.connectedPendingForm?.commander || form.commander}</div>
+                                <div className="hanich-tag">{form?.connectedPendingForm?.name || form.name}</div>
+                                <div style={{ marginTop: "2rem" }}>
+                                  <p className="event-description">אירוע: {truncateText(form?.connectedPendingForm?.eventDescription || form.occurrence, 15)}</p>
+                                  <p className="form-date">תאריך האירוע: {formatDateTime(form.requestDateTime)}</p>
+                                  <p className="form-date">תאריך הדיווח: {formatDateTime(form.date)}</p>
+                                  {form.punishment && (
+                                    <p className="punishment-preview">{truncateText(form.punishment, 7)}</p>
+                                  )}
+                                  {form.comments && form.comments.length > 0 && (
+                                    <div className="comment-count">{form.comments.length}</div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
+                            )}
+                          </Draggable>
+                        } else {
+                          const group = item;
+                          return <Draggable key={group.id} draggableId={group.id} index={index}>
+                            {(provided) => (
+                              <div
+                                className="group-card"
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                onClick={() => selectItem(group, false)}
+                              >
+                                <div style={{ marginTop: "2rem" }}>
+                                  <p className="event-description">אירוע: {truncateText(group.description, 15)}</p>
+                                  <p className="form-date">תאריך: {formatDateTime(group.date)}</p>
+                                </div>
+
+                                <Droppable droppableId={`group-${group.id}`}>
+                                  {(dropProvided) => (
+                                    <div
+                                      ref={dropProvided.innerRef}
+                                      {...dropProvided.droppableProps}
+                                      className="group-inner-droppable"
+                                    >
+                                      {/* forms inside this group */}
+                                      {displayedItems.filter(f => f.groupId === group.id).map((form, idx) => (
+                                        <Draggable key={form.id} draggableId={form.id} index={idx}>
+                                          {(provided) => (
+                                            <div
+                                              className="form-card"
+                                              ref={provided.innerRef}
+                                              {...provided.draggableProps}
+                                              {...provided.dragHandleProps}
+                                              onClick={() => selectItem(form, true)}
+                                            >
+                                              <div>{form.name}</div>
+                                            </div>
+                                          )}
+                                        </Draggable>
+                                      ))}
+                                      {dropProvided.placeholder}
+                                    </div>
+                                  )}
+                                </Droppable>
+                              </div>
+                            )}
+                          </Draggable>
+
+                        }
+
+                      })}
                     {provided.placeholder}
                   </div>
                 )}
@@ -184,11 +269,11 @@ const Dashboard = ({
       {selectedForm && (
         <div className="modal-overlay" onClick={() => {
           onUpdatePunishment(selectedForm.id, selectedForm.punishment);
-          setSelectedForm(null);
+          selectItem(null, true);
         }}>
           <Form
             selectedForm={selectedForm}
-            setSelectedForm={setSelectedForm}
+            setSelectedForm={(form) => selectItem(form, true)}
             onUpdatePunishment={onUpdatePunishment}
             pendingForms={pendingForms}
             handleMergeWithPending={handleMergeWithPending}

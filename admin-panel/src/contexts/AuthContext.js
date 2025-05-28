@@ -10,6 +10,8 @@ export const AuthProvider = ({ children }) => {
   const [columns, setColumns] = useState([]);
   const [pendingForms, setPendingForms] = useState([])
   const [loginError, setLoginError] = useState('');
+  const [formGroups, setFormGroups] = useState([]);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -39,8 +41,10 @@ export const AuthProvider = ({ children }) => {
         const comment = await response.json();
         setForms(prevForms =>
           prevForms.map(form =>
-            form.id === selectedFormId ? { ...form, 
-              comments: [...form.comments || [], comment] } : form
+            form.id === selectedFormId ? {
+              ...form,
+              comments: [...form.comments || [], comment]
+            } : form
           )
         )
         return comment
@@ -414,6 +418,170 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const fetchGroups = async () => {
+    try {
+      const { serverUrl } = getConfig();
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${serverUrl}/api/groups`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setFormGroups(data);
+      }
+    } catch (error) {
+      console.error('Error fetching groups:', error);
+    }
+  };
+
+
+  const createGroup = async (groupData) => {
+    try {
+      const { serverUrl } = getConfig();
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${serverUrl}/api/groups`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(groupData)
+      });
+      if (response.ok) {
+        const newGroup = await response.json();
+        setFormGroups(prev => [...prev, newGroup]);
+        return newGroup;
+      }
+    } catch (error) {
+      console.error('Error creating group:', error);
+    }
+  };
+
+
+  const updateGroup = async (id, updatedData) => {
+    try {
+      const { serverUrl } = getConfig();
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${serverUrl}/api/groups/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updatedData)
+      });
+      if (response.ok) {
+        setFormGroups(prev => prev.map(g => g.id === id ? { ...g, ...updatedData } : g));
+      }
+    } catch (error) {
+      console.error('Error updating group:', error);
+    }
+  };
+
+
+  const deleteGroup = async (id) => {
+    try {
+      const { serverUrl } = getConfig();
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${serverUrl}/api/groups/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        setFormGroups(prev => prev.filter(g => g.id !== id));
+      }
+    } catch (error) {
+      console.error('Error deleting group:', error);
+    }
+  };
+
+
+  const addFormToGroup = async (groupId, formId) => {
+    try {
+      const { serverUrl } = getConfig();
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${serverUrl}/api/groups/${groupId}/forms/${formId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        await fetchGroups(); // refresh groups list
+      }
+    } catch (error) {
+      console.error('Error adding form to group:', error);
+    }
+  };
+
+
+  const removeFormFromGroup = async (groupId, formId) => {
+    try {
+      const { serverUrl } = getConfig();
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${serverUrl}/api/groups/${groupId}/forms/${formId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        await fetchGroups(); // refresh groups list
+      }
+    } catch (error) {
+      console.error('Error removing form from group:', error);
+    }
+  };
+
+
+  const handleUpdateGroupColumn = async (groupId, columnId) => {
+    try {
+      const { serverUrl } = getConfig();
+      const token = localStorage.getItem('adminToken');
+      if (!token) {
+        handleLogout();
+        return;
+      }
+
+      const response = await fetch(`${serverUrl}/api/groups/${groupId}/column`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ columnId })
+      });
+
+      if (response.status === 401) {
+        const data = await response.json();
+        if (data.code === 'TOKEN_EXPIRED') {
+          // Try to refresh the token
+          const refreshResponse = await fetch(`${serverUrl}/api/admin/refresh-token`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (refreshResponse.ok) {
+            const { token: newToken } = await refreshResponse.json();
+            localStorage.setItem('adminToken', newToken);
+            // Retry the original request with new token
+            return handleUpdateGroupColumn(groupId, columnId);
+          }
+        }
+        // If refresh failed or token is invalid, redirect to login
+        handleLogout();
+        return;
+      }
+    } catch (error) {
+      console.error('Error updating column:', error);
+      handleLogout();
+    }
+  };
+
 
   return (
     <AuthContext.Provider
@@ -434,13 +602,22 @@ export const AuthProvider = ({ children }) => {
         handleMergePendingForm,
         handleFormDelete,
         handleUnmergePendingForm,
-        handleAddComment
+        handleAddComment,
+        fetchGroups,
+        createGroup,
+        updateGroup,
+        deleteGroup,
+        addFormToGroup,
+        removeFormFromGroup,
+        formGroups,
+        handleUpdateGroupColumn
       }}
     >
       {children}
     </AuthContext.Provider>
   );
 };
+
 
 export const useAuth = () => {
   const context = useContext(AuthContext);

@@ -73,3 +73,14 @@ export interface CommentUpdateRequest extends Request {
     text: string;
   };
 } 
+
+export interface FormGroup {
+  id: string;
+  title: string;
+  description: string;
+  punishment: string;
+  columnId: String;
+  forms: string[]; // list of Form ids
+  comments: Comment[];
+  createdAt: string;
+}

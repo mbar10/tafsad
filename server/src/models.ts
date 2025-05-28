@@ -32,6 +32,18 @@ const FormSchema = new mongoose.Schema({
   connectedPendingForm: { type: mongoose.Schema.Types.ObjectId, ref: 'PendingForm', default: null }
 });
 
+export const FormGroupSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  title: String,
+  description: String,
+  punishment: String,
+  columnId: String,
+  forms: [{ type: String }], // list of form IDs
+  comments: [CommentSchema],
+  createdAt: String
+});
+
 
 export const Form = mongoose.model('Form', FormSchema);
 export const PendingForm = mongoose.model('PendingForm', PendingFormSchema);
+export const FormGroup = mongoose.model('FormGroup', FormGroupSchema);

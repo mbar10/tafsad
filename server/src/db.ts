@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
-import { Form, PendingForm } from "./models";
-import { Form as FormType, PendingForm as PendingFormType } from "./types"
+import { Form, PendingForm, FormGroup } from "./models";
+import { Form as FormType, PendingForm as PendingFormType, FormGroup as FormGroupType } from "./types"
+import { randomUUID } from 'crypto';
+
 
 export class Database {
   private uri: string;
@@ -151,10 +153,111 @@ export class Database {
     return connectedPendingForm
   }
 
-
-
   async deleteForm(id: string): Promise<void> {
     const result = await Form.deleteOne({ id });
     if (result.deletedCount === 0) throw new Error('Form not found');
+  }
+
+  async getAllFormGroups(): Promise<FormType[]> {
+    return Form.find().lean();
+  }
+
+  async createFormGroup(data: {
+    title: string;
+    description: string;
+    punishment: string;
+  }): Promise<FormGroupType> {
+    const now = new Date().toISOString();
+    const id = randomUUID();;
+
+    const group = new FormGroup({
+      id,
+      title: data.title,
+      description: data.description,
+      punishment: data.punishment,
+      forms: [],
+      comments: [],
+      createdAt: now
+    });
+
+    await group.save();
+    return group.toObject();
+  }
+
+  async updateFormGroupDetails(
+    id: string,
+    updates: { title?: string; description?: string; punishment?: string }
+  ): Promise<void> {
+    const result = await FormGroup.updateOne({ id }, { $set: updates });
+    if (result.modifiedCount === 0) throw new Error('Group not found');
+  }
+
+  async deleteFormGroup(id: string): Promise<void> {
+    const result = await FormGroup.deleteOne({ id });
+    if (result.deletedCount === 0) throw new Error('Group not found');
+  }
+
+  async addFormToGroup(groupId: string, formId: string): Promise<void> {
+    const result = await FormGroup.updateOne(
+      { id: groupId },
+      { $addToSet: { forms: formId } }
+    );
+    if (result.modifiedCount === 0) throw new Error('Group not found');
+  }
+
+  async removeFormFromGroup(groupId: string, formId: string): Promise<void> {
+    const result = await FormGroup.updateOne(
+      { id: groupId },
+      { $pull: { forms: formId } }
+    );
+    if (result.modifiedCount === 0) throw new Error('Group not found or form not in group');
+  }
+
+  async addCommentToGroup(groupId: string, text: string): Promise<any> {
+    const newComment = {
+      id: Date.now().toString(),
+      text,
+      createdAt: new Date().toISOString()
+    };
+
+    const result = await FormGroup.updateOne(
+      { id: groupId },
+      { $push: { comments: newComment } }
+    );
+    if (result.modifiedCount === 0) throw new Error('Group not found');
+
+    return newComment;
+  }
+
+  async updateGroupComment(groupId: string, commentId: string, text: string): Promise<any> {
+    const group = await FormGroup.findOne({ id: groupId });
+    if (!group) throw new Error('Group not found');
+
+    const comment = group.comments.find(c => c.id === commentId);
+    if (!comment) throw new Error('Comment not found');
+
+    comment.text = text;
+    await group.save();
+    return comment;
+  }
+
+  async deleteGroupComment(groupId: string, commentId: string): Promise<void> {
+    const group = await FormGroup.findOne({ id: groupId });
+    if (!group) throw new Error('Group not found');
+
+    group.comments.pull({ id: commentId });
+    await group.save();
+  }
+
+  async updateFormGroupColumn(id: string, columnId: string): Promise<void> {
+    const form = await FormGroup.findOne({ id }).lean();
+    if (!form) throw new Error('Form group not found');
+
+    // If the form is already in the requested column, return without updating
+    if (form.columnId === columnId) return;
+
+    // Otherwise, update the column
+    const result = await FormGroup.updateOne({ id }, { columnId });
+    if (result.modifiedCount === 0) throw new Error('Form group not found');
   }
 }
