@@ -19,8 +19,9 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       setIsAuthenticated(true);
       fetchForms(token);
-      fetchPendingForms()
-      fetchColumns()
+      fetchFormsGroup(token);
+      fetchPendingForms();
+      fetchColumns();
     }
   }, []);
 
@@ -116,6 +117,51 @@ export const AuthProvider = ({ children }) => {
       if (response.ok) {
         const data = await response.json();
         setForms(data);
+      } else {
+        // Handle other error cases
+        handleLogout();
+      }
+    } catch (error) {
+      console.error('Error fetching forms:', error);
+      handleLogout();
+    }
+  };
+
+  const fetchFormsGroup = async (token) => {
+    try {
+      const { serverUrl } = getConfig();
+      const response = await fetch(`${serverUrl}/api/groups`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.status === 401) {
+        const data = await response.json();
+        const { serverUrl } = getConfig();
+        if (data.code === 'TOKEN_EXPIRED') {
+          const refreshResponse = await fetch(`${serverUrl}/api/admin/refresh-token`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (refreshResponse.ok) {
+            const { token: newToken } = await refreshResponse.json();
+            localStorage.setItem('adminToken', newToken);
+            // Retry the original request with new token
+            return fetchForms(newToken);
+          }
+        }
+        // If refresh failed or token is invalid, redirect to login
+        handleLogout();
+        return;
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        setFormGroups(data);
       } else {
         // Handle other error cases
         handleLogout();
@@ -572,9 +618,15 @@ export const AuthProvider = ({ children }) => {
             return handleUpdateGroupColumn(groupId, columnId);
           }
         }
-        // If refresh failed or token is invalid, redirect to login
+      }
+      if (response.ok) {
+        setFormGroups(prevFormGroups =>
+          prevFormGroups.map(group =>
+            group.id === groupId ? { ...group, columnId } : group
+          )
+        );
+      } else {
         handleLogout();
-        return;
       }
     } catch (error) {
       console.error('Error updating column:', error);

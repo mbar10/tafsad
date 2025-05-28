@@ -6,7 +6,6 @@ import { ColumnUpdateRequest } from "../types";
 export function groupRouter(database: Database) {
     const router = Router();
 
-    // Get all groups
     router.get('/api/groups', authenticateToken, async (req: Request, res: Response) => {
         try {
             const groups = await database.getAllFormGroups();
@@ -16,22 +15,20 @@ export function groupRouter(database: Database) {
         }
     });
 
-    // Create a group
     router.post('/api/groups', authenticateToken, async (req: Request, res: Response) => {
         try {
-            const { title, description, punishment } = req.body;
-            if (!title || !description || !punishment) {
+            const { title, description } = req.body;
+            if (!title || !description) {
                 return res.status(400).json({ message: 'Missing required fields' });
             }
 
-            const newGroup = await database.createFormGroup({ title, description, punishment });
+            const newGroup = await database.createFormGroup({ title, description });
             res.status(201).json(newGroup);
         } catch (error) {
             res.status(500).json({ message: 'Error creating group', error: (error as Error).message });
         }
     });
 
-    // Update group details (title / description / punishment)
     router.patch('/api/groups/:id', authenticateToken, async (req: Request, res: Response) => {
         try {
             const { id } = req.params;
@@ -52,7 +49,6 @@ export function groupRouter(database: Database) {
         }
     });
 
-    // Delete a group
     router.delete('/api/groups/:id', authenticateToken, async (req: Request, res: Response) => {
         try {
             const { id } = req.params;
@@ -67,7 +63,6 @@ export function groupRouter(database: Database) {
         }
     });
 
-    // Add a form to a group
     router.post('/api/groups/:groupId/forms/:formId', authenticateToken, async (req: Request, res: Response) => {
         try {
             const { groupId, formId } = req.params;
@@ -82,7 +77,6 @@ export function groupRouter(database: Database) {
         }
     });
 
-    // Remove a form from a group
     router.delete('/api/groups/:groupId/forms/:formId', authenticateToken, async (req: Request, res: Response) => {
         try {
             const { groupId, formId } = req.params;

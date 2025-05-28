@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
-import { AuthRequest, CommentCreateRequest } from './types';
+import { AuthRequest } from './types';
 import { Database } from './db';
 import { pendingFormRouter } from './routers/pendingFormRouter';
 import { CommentsRouter } from './routers/commentsRouter';
@@ -15,6 +15,25 @@ const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 const database = new Database(process.env.MONGO_URI || 'mongodb://localhost:27017/forms');
+
+export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction): void => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    res.status(401).json({ message: 'No token provided' });
+    return;
+  }
+
+  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+    if (err) {
+      res.status(403).json({ message: 'Invalid token' });
+      return;
+    }
+    req.user = user;
+    next();
+  });
+};
 
 database.connect()
 
@@ -44,27 +63,6 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error('Error:', err);
   res.status(500).json({ message: 'Internal server error', error: err.message });
 });
-
-
-// Middleware to verify JWT token
-export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction): void => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    res.status(401).json({ message: 'No token provided' });
-    return;
-  }
-
-  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-    if (err) {
-      res.status(403).json({ message: 'Invalid token' });
-      return;
-    }
-    req.user = user;
-    next();
-  });
-};
 
 // Admin login
 app.post('/api/admin/login', (req: Request, res: Response) => {

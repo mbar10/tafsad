@@ -24,7 +24,8 @@ const Dashboard = ({
     handleUpdateColumn,
     handleUpdatePunishment,
     formGroups,
-    handleUpdateGroupColumn
+    handleUpdateGroupColumn,
+    addFormToGroup
   } = useAuth();
   const [selectedForm, setSelectedForm] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -46,17 +47,17 @@ const Dashboard = ({
       })
     ).map(form => ({ ...form, tag: "form" }));
 
-    const filteredTaggedGroups = formGroups.filter(group => {
+    const filteredTaggedGroups = formGroups.filter(group =>
       filters.every(filter => {
         if (!filter.value) return true;
-        if (filter.key === "timeFrom") return new Date(group.date) >= new Date(filter.value);
-        if (filter.key === "timeTo") return new Date(group.date) <= new Date(filter.value);
+        if (filter.key === "timeFrom") return new Date(group.createdAt) >= new Date(filter.value);
+        if (filter.key === "timeTo") return new Date(group.createdAt) <= new Date(filter.value);
         const formValue = group[filter.key] || "";
         return formValue.toLowerCase().includes(filter.value.toLowerCase());
       })
-    }).map(group => ({ ...group, tag: "group" }));
+    ).map(group => ({ ...group, tag: "group" }));
 
-    return [...filteredTaggedForms, filteredTaggedGroups].sort((a, b) => {
+    return [...filteredTaggedForms, ...filteredTaggedGroups].sort((a, b) => {
       const dateA = new Date(a.date);
       const dateB = new Date(b.date);
       return isAscending ? dateA - dateB : dateB - dateA;
@@ -99,14 +100,22 @@ const Dashboard = ({
   const handleDragEnd = async (result) => {
     if (!result.destination) return;
     const { draggableId, destination } = result;
-  
+
     if (destination.droppableId.startsWith("group-")) {
-      const groupId = destination.droppableId.replace("group-", "");
-      await handleUpdateGroupColumn(draggableId, groupId);
+      if (formGroups.find(group => group.id === draggableId)) {
+        console.log("cant drag a group to group");
+      } else {
+        const groupId = destination.droppableId.replace("group-", "");
+        await addFormToGroup(groupId, draggableId);
+      }
     } else {
-      await handleUpdateColumn(draggableId, destination.droppableId);
+      if(formGroups.find(group => group.id === draggableId)){
+        await handleUpdateGroupColumn(draggableId, destination.droppableId)
+      }else{
+        await handleUpdateColumn(draggableId, destination.droppableId);
+      }
     }
-  };  
+  };
 
   const handleDeleteForm = async (formId) => {
     await handleFormDelete(formId)
@@ -146,8 +155,8 @@ const Dashboard = ({
               </button>
               {
                 isPendingFormEditor
-                ? <PendingFormsEditor />
-                : <GroupCreator/>
+                  ? <PendingFormsEditor />
+                  : <GroupCreator />
               }
               {pendingForms.map(form => (
                 <div key={form.id} className="pending-form-card">

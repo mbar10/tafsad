@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { Form, PendingForm, FormGroup } from "./models";
 import { Form as FormType, PendingForm as PendingFormType, FormGroup as FormGroupType } from "./types"
 import { randomUUID } from 'crypto';
+import { COLUMNS } from './constants';
 
 
 export class Database {
@@ -159,13 +160,12 @@ export class Database {
   }
 
   async getAllFormGroups(): Promise<FormType[]> {
-    return Form.find().lean();
+    return FormGroup.find().lean();
   }
 
   async createFormGroup(data: {
     title: string;
     description: string;
-    punishment: string;
   }): Promise<FormGroupType> {
     const now = new Date().toISOString();
     const id = randomUUID();;
@@ -174,9 +174,10 @@ export class Database {
       id,
       title: data.title,
       description: data.description,
-      punishment: data.punishment,
+      punishment: "",
       forms: [],
       comments: [],
+      columnId: COLUMNS[0].id,
       createdAt: now
     });
 
