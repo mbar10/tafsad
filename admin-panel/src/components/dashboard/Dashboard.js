@@ -60,7 +60,7 @@ const Dashboard = ({
 
   const onUpdatePunishment = (id, punishment) => {
     handleUpdatePunishment(id, punishment);
-    if (selectedForm.columnId === columns[1].id) {
+    if (selectedForm.columnId === columns[1].id && punishment !== "") {
       handleUpdateColumn(selectedForm.id, columns[2].id);
     }
   }
