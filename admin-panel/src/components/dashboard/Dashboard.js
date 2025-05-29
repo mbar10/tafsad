@@ -24,7 +24,13 @@ const Dashboard = ({
     handleUpdatePunishment
   } = useAuth();
   const [selectedForm, setSelectedForm] = useState(null);
-  const [filters, setFilters] = useState([]);
+  const [filters, setFilters] = useState([
+    {
+        key: "timeFrom",
+        value: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)
+    }
+]);
+
   const [isAscending, setIsAscending] = useState();
   const { exportToCSV } = useExportToCsv(forms, columns);
 

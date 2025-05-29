@@ -16,7 +16,9 @@ function App() {
     <Router>
       <div className="App">
         <header className="App-header">
+          <img src="./mamason_invert.png" style={{width: "200px"}}/>
           <h1>מילוי טופס דיווח</h1>
+          <h2 className="empire">אימפריה!</h2>
         </header>
         <main>
           <Routes>

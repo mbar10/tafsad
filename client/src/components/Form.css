@@ -1,9 +1,8 @@
 .form-container {
-  background-color: white;
+  background-color: #1e1e2f;
   padding: 2rem;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  margin-bottom: 2rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
 }
 
 .form-group {
@@ -14,18 +13,20 @@
   display: block;
   margin-bottom: 0.5rem;
   font-weight: bold;
-  color: #2c3e50;
+  color: #f0f0f0;
 }
 
 .form-group input,
 .form-group textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #ddd;
+  border: 1px solid #444;
   border-radius: 4px;
   font-size: 1rem;
-  transition: border-color 0.3s ease;
-  font-family:Arial, Helvetica, sans-serif
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  font-family: Arial, Helvetica, sans-serif;
+  background-color: #2a2a3d;
+  color: #f0f0f0;
 }
 
 .form-group textarea {
@@ -36,28 +37,36 @@
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+  border-color: #732cbb;
+  box-shadow: 0 0 0 3px rgba(72, 36, 157, 0.3);
 }
 
 button[type="submit"] {
-  background-color: #3498db;
+  background-color: #2c0349;
   color: white;
   padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 4px;
   font-size: 1rem;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, transform 0.2s ease;
   width: 100%;
 }
 
 button[type="submit"]:hover {
-  background-color: #2980b9;
+  background-color: #732cbb;
+  transform: translateY(-1px);
 }
 
 @media (max-width: 768px) {
   .form-container {
     padding: 1rem;
   }
-} 
+}
+
+
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  opacity: 1;
+  cursor: pointer;
+  color: white;
+}

@@ -1,16 +1,25 @@
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+}
+
+
 .App {
   text-align: right;
   direction: rtl;
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: #1c1b29; /* dark background */
+  color: #f0f0f0;
+  padding-bottom: 2rem;
 }
 
 .App-header {
-  background-color: #2c3e50;
+  background-color: #2c0349;
   padding: 2rem;
   color: white;
   text-align: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .App-header h1 {
@@ -38,7 +47,11 @@
 main {
   max-width: 1200px;
   margin: 2rem auto;
-  padding: 0 1rem;
+  margin-bottom: 0;
+  padding: 0.5rem 0.5rem;
+  background: #2a2a3d;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 section {
@@ -46,13 +59,13 @@ section {
 }
 
 .error-message {
-  background-color: #ffebee;
-  color: #c62828;
+  background-color: #4e1b1b;
+  color: #f44336;
   padding: 1rem;
   border-radius: 4px;
   margin: 1rem 0;
   text-align: center;
-  border: 1px solid #ef9b9b;
+  border: 1px solid #a94442;
 }
 
 .toast {
@@ -60,11 +73,11 @@ section {
   bottom: 2rem;
   left: 50%;
   transform: translateX(-50%);
-  background-color: #4caf50;
+  background-color: #892bb5;
   color: white;
   padding: 1rem 2rem;
   border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
   animation: slideUp 0.3s ease-out;
   z-index: 1000;
 }
@@ -84,14 +97,35 @@ section {
   .App-header h1 {
     font-size: 2rem;
   }
-  
+
   .App-header nav {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .App-header nav a {
     margin: 0;
   }
-} 
+}
+.empire {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-size: 2rem;
+  text-shadow: 0 0 10px #732cbb, 0 0 20px #732cbb, 0 0 30px #732cbb, 0 0 40px #732cbb;
+}
+
+button {
+  background-color: #2c0349;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+button:hover {
+  background-color: #732cbb;
+  transform: translateY(-1px);
+}
