@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import Form from './components/Form';
+import { getConfig } from './config';
 
 function App() {
   const [showToast, setShowToast] = useState(false);
@@ -12,13 +13,17 @@ function App() {
     setTimeout(() => setShowToast(false), 3000);
   };
 
+  const {isEmpire} = getConfig();
+
   return (
     <Router>
       <div className="App">
         <header className="App-header">
           <img src="./mamason_invert.png" style={{width: "200px"}}/>
           <h1>מילוי טופס דיווח</h1>
-          <h2 className="empire">אימפריה!</h2>
+          {
+            isEmpire && <h2 className="empire">אימפריה!</h2>
+          }
         </header>
         <main>
           <Routes>
